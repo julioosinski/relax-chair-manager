@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { EditPoltronaDialog } from "@/components/EditPoltronaDialog";
 import QRCodeDisplay from "@/components/QRCodeDisplay";
+import { generateCompleteQRCode } from "@/api/mercadopago";
 
 interface Poltrona {
   poltrona_id: string;
@@ -122,26 +123,57 @@ const Poltronas = () => {
 
   const handleGenerateQR = async (poltronaId: string) => {
     try {
-      // Aqui você implementaria a chamada para gerar o QR code via API
-      // Por enquanto, vamos simular
+      const poltrona = poltronas.find(p => p.poltrona_id === poltronaId);
+      if (!poltrona) {
+        toast.error("Poltrona não encontrada");
+        return;
+      }
+
       toast.info(`Gerando QR Code para poltrona ${poltronaId}...`);
       
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Atualizar a poltrona com dados simulados
-      setPoltronas(prev => prev.map(p => 
-        p.poltrona_id === poltronaId 
-          ? { 
-              ...p, 
-              qr_code_data: `00020126580014br.gov.bcb.pix0136${Math.random().toString(36).substring(2, 15)}520400005303986540510.005802BR5913Poltrona Massagem6009Sao Paulo62070503***6304`,
-              payment_id: `MP${Date.now()}`
-            }
-          : p
-      ));
-      
-      toast.success(`✅ QR Code gerado para poltrona ${poltronaId}`);
+      // Carregar configurações do Mercado Pago
+      const systemConfig = localStorage.getItem('systemConfig');
+      if (!systemConfig) {
+        toast.error("Configurações do Mercado Pago não encontradas");
+        return;
+      }
+
+      const config = JSON.parse(systemConfig);
+      if (!config.mercadopagoToken) {
+        toast.error("Token do Mercado Pago não configurado");
+        return;
+      }
+
+      // Gerar QR code usando a API proxy
+      const result = await generateCompleteQRCode(
+        {
+          accessToken: config.mercadopagoToken,
+          publicKey: config.mercadopagoPublicKey,
+          webhookUrl: config.webhookUrl
+        },
+        poltronaId,
+        poltrona.price,
+        poltrona.location
+      );
+
+      if (result.success && result.paymentId && result.qrCode) {
+        // Atualizar a poltrona com os dados reais
+        setPoltronas(prev => prev.map(p => 
+          p.poltrona_id === poltronaId 
+            ? { 
+                ...p, 
+                qr_code_data: result.qrCode,
+                payment_id: result.paymentId
+              }
+            : p
+        ));
+        
+        toast.success(`✅ QR Code gerado para poltrona ${poltronaId}`);
+      } else {
+        toast.error(`❌ ${result.message}`);
+      }
     } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
       toast.error(`❌ Erro ao gerar QR Code para poltrona ${poltronaId}`);
     }
   };

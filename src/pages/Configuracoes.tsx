@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { testMercadoPagoConnection, fallbackTestConnection } from "@/api/mercadopago";
 
 interface SystemConfig {
   // Supabase
@@ -125,7 +126,7 @@ const Configuracoes = () => {
           result = await testSupabaseConnection();
           break;
         case 'mercadopago':
-          result = await testMercadoPagoConnection();
+          result = await testMercadoPagoConnectionAPI();
           break;
         case 'webhook':
           result = await testWebhookConnection();
@@ -183,37 +184,34 @@ const Configuracoes = () => {
     }
   };
 
-  const testMercadoPagoConnection = async (): Promise<TestResult> => {
+  const testMercadoPagoConnectionAPI = async (): Promise<TestResult> => {
     try {
-      const response = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${config.mercadopagoToken}`,
-          'Content-Type': 'application/json'
-        }
+      // Usar a API proxy para evitar problemas de CORS
+      const result = await testMercadoPagoConnection({
+        accessToken: config.mercadopagoToken,
+        publicKey: config.mercadopagoPublicKey,
+        webhookUrl: config.webhookUrl
       });
       
-      if (response.ok) {
-        return {
-          service: 'mercadopago',
-          status: 'success',
-          message: 'Conexão com Mercado Pago estabelecida',
-          details: 'Token válido e API acessível'
-        };
-      } else {
-        return {
-          service: 'mercadopago',
-          status: 'error',
-          message: 'Falha na conexão com Mercado Pago',
-          details: `Status: ${response.status} - ${response.statusText}`
-        };
-      }
-    } catch (error: any) {
       return {
         service: 'mercadopago',
-        status: 'error',
-        message: 'Erro ao conectar com Mercado Pago',
-        details: error.message
+        status: result.success ? 'success' : 'error',
+        message: result.message,
+        details: result.details
+      };
+    } catch (error: any) {
+      // Fallback para teste local se a API não estiver disponível
+      const fallbackResult = await fallbackTestConnection({
+        accessToken: config.mercadopagoToken,
+        publicKey: config.mercadopagoPublicKey,
+        webhookUrl: config.webhookUrl
+      });
+      
+      return {
+        service: 'mercadopago',
+        status: fallbackResult.success ? 'warning' : 'error',
+        message: fallbackResult.message,
+        details: fallbackResult.details
       };
     }
   };
