@@ -43,20 +43,23 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-card rounded-2xl p-8 shadow-card border border-border">
+        <div className="bg-card/50 backdrop-blur-sm rounded-3xl p-8 shadow-card border border-border/50">
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">💆‍♂️</div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <div className="text-6xl mb-6">💆‍♂️</div>
+            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
               Poltrona Relax
             </h1>
-            <p className="text-muted-foreground mt-2">Sistema Administrativo</p>
+            <p className="text-muted-foreground text-lg">Sistema Administrativo</p>
+            <div className="w-24 h-1 bg-gradient-primary rounded-full mx-auto mt-4"></div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -64,12 +67,14 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-background"
+                className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -77,16 +82,23 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-background"
+                className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90"
+              className="w-full bg-gradient-primary hover:opacity-90 h-12 text-base font-semibold shadow-lg transition-all duration-300"
               disabled={loading}
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Entrando...
+                </div>
+              ) : (
+                "Entrar"
+              )}
             </Button>
           </form>
         </div>

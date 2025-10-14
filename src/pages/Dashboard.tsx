@@ -142,57 +142,68 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Visão geral do sistema de poltronas
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          Dashboard
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Visão geral do sistema de poltronas de massagem
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <Card
             key={index}
-            className="border-border bg-card hover:shadow-glow transition-all duration-300"
+            className="card-hover border-border bg-card/50 backdrop-blur-sm"
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 {stat.title}
               </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.gradient}`}>
-                <stat.icon className="h-4 w-4 text-primary-foreground" />
+              <div className={`p-3 rounded-xl ${stat.gradient} shadow-lg`}>
+                <stat.icon className="h-5 w-5 text-white" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-3xl font-bold text-foreground">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle>Últimas Transações</CardTitle>
+      <Card className="border-border bg-card/50 backdrop-blur-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-2xl font-bold flex items-center gap-2">
+            <DollarSign className="h-6 w-6 text-primary" />
+            Últimas Transações
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {recentPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhuma transação encontrada
-              </p>
+              <div className="text-center py-12">
+                <DollarSign className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">
+                  Nenhuma transação encontrada
+                </p>
+                <p className="text-muted-foreground/70 text-sm mt-2">
+                  As transações aparecerão aqui quando houver pagamentos
+                </p>
+              </div>
             ) : (
               recentPayments.map((payment) => (
                 <div
                   key={payment.payment_id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-background border border-border hover:border-primary transition-colors"
+                  className="flex items-center justify-between p-5 rounded-xl bg-background/50 border border-border hover:border-primary/50 hover:shadow-lg transition-all duration-300 group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <DollarSign className="h-5 w-5 text-primary" />
+                    <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center shadow-lg">
+                      <DollarSign className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium">Poltrona {payment.poltrona_id}</p>
+                      <p className="font-semibold text-lg">Poltrona {payment.poltrona_id}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(payment.created_at).toLocaleDateString("pt-BR")} às{" "}
                         {new Date(payment.created_at).toLocaleTimeString("pt-BR")}
@@ -200,10 +211,10 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-accent">
+                    <p className="font-bold text-2xl text-accent">
                       R$ {payment.amount.toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground capitalize">
+                    <p className="text-xs text-muted-foreground capitalize bg-accent/10 px-2 py-1 rounded-full">
                       {payment.status}
                     </p>
                   </div>

@@ -39,24 +39,24 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="sidebar-container">
-      <SidebarContent>
-        <div className="px-4 py-6 flex items-center gap-3 border-b border-sidebar-border">
+    <Sidebar collapsible="icon" className="sidebar-container border-r border-sidebar-border">
+      <SidebarContent className="flex flex-col h-full">
+        <div className="px-4 py-6 flex items-center gap-3 border-b border-sidebar-border bg-gradient-to-r from-sidebar-primary/10 to-transparent">
           <div className="text-3xl">💆‍♂️</div>
           {state !== "collapsed" && (
             <div>
               <h2 className="font-bold text-lg text-sidebar-foreground">Poltrona Relax</h2>
-              <p className="text-xs text-sidebar-foreground/70">Admin</p>
+              <p className="text-xs text-sidebar-foreground/70">Sistema Admin</p>
             </div>
           )}
         </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70 px-4">
-            Menu
+        <SidebarGroup className="flex-1">
+          <SidebarGroupLabel className="text-sidebar-foreground/70 px-4 py-2 text-xs font-semibold uppercase tracking-wider">
+            Navegação
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
@@ -64,15 +64,15 @@ export function AppSidebar() {
                       to={item.url}
                       end
                       className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
+                        `sidebar-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                           isActive
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            ? "active shadow-sm"
+                            : "text-sidebar-foreground/80 hover:text-sidebar-foreground"
                         }`
                       }
                     >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="truncate">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -81,15 +81,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="mt-auto">
+        <SidebarGroup className="mt-auto border-t border-sidebar-border pt-4">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground"
+                  className="text-sidebar-foreground/80 hover:bg-destructive hover:text-destructive-foreground rounded-lg px-3 py-2.5 transition-all"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
                   <span>Sair</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
