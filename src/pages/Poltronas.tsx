@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { EditPoltronaDialog } from "@/components/EditPoltronaDialog";
 
 interface Poltrona {
   poltrona_id: string;
@@ -29,6 +30,7 @@ const Poltronas = () => {
   const [poltronas, setPoltronas] = useState<Poltrona[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPoltrona, setEditingPoltrona] = useState<Poltrona | null>(null);
   const [formData, setFormData] = useState<Poltrona>({
     poltrona_id: "",
     ip: "",
@@ -60,6 +62,21 @@ const Poltronas = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação
+    if (!formData.poltrona_id.trim()) {
+      toast.error("ID da poltrona é obrigatório");
+      return;
+    }
+    if (formData.price <= 0) {
+      toast.error("Valor deve ser maior que zero");
+      return;
+    }
+    if (formData.duration <= 0) {
+      toast.error("Duração deve ser maior que zero");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -80,7 +97,11 @@ const Poltronas = () => {
         active: true,
       });
     } catch (error: any) {
-      toast.error("Erro ao cadastrar poltrona");
+      if (error.code === "23505") {
+        toast.error("Já existe uma poltrona com este ID");
+      } else {
+        toast.error("Erro ao cadastrar poltrona");
+      }
       console.error(error);
     } finally {
       setLoading(false);
@@ -266,7 +287,12 @@ const Poltronas = () => {
                   <Play className="h-3 w-3 mr-1" />
                   Teste
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setEditingPoltrona(poltrona)}
+                >
                   <Edit className="h-3 w-3 mr-1" />
                   Editar
                 </Button>
@@ -291,6 +317,15 @@ const Poltronas = () => {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {editingPoltrona && (
+        <EditPoltronaDialog
+          poltrona={editingPoltrona}
+          open={!!editingPoltrona}
+          onOpenChange={(open) => !open && setEditingPoltrona(null)}
+          onSuccess={fetchPoltronas}
+        />
       )}
     </div>
   );
