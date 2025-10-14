@@ -1,4 +1,14 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
   "functions": {
     "api/mercadopago-webhook.js": {
       "maxDuration": 10
@@ -13,6 +23,16 @@
       "maxDuration": 10
     }
   },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "env": {
     "MERCADOPAGO_ACCESS_TOKEN": "@mercadopago_access_token"
   }
