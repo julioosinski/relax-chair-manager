@@ -48,7 +48,7 @@ interface TestConnectionResponse {
 }
 
 // Configuração base
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://seu-backend.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://relax-chair-manager.vercel.app/api';
 
 /**
  * Testa a conexão com o Mercado Pago através do backend
@@ -82,6 +82,12 @@ export const testMercadoPagoConnection = async (config: MercadoPagoConfig): Prom
       };
     }
   } catch (error) {
+    // Se der erro de DNS ou rede, usar fallback
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.warn('Backend não disponível, usando modo fallback');
+      return fallbackTestConnection(config);
+    }
+    
     return {
       success: false,
       message: 'Erro ao conectar com Mercado Pago',
@@ -296,18 +302,35 @@ export const generateCompleteQRCode = async (
 
 // Função de fallback para quando o backend não estiver disponível
 export const fallbackTestConnection = async (config: MercadoPagoConfig): Promise<TestConnectionResponse> => {
-  // Simular teste quando backend não está disponível
-  if (config.accessToken && config.accessToken.length > 10) {
+  // Validar configuração básica
+  if (!config.accessToken) {
     return {
-      success: true,
-      message: 'Configuração válida (modo offline)',
-      details: 'Backend não disponível - usando configuração local'
+      success: false,
+      message: 'Token de acesso não configurado',
+      details: 'Configure o token do Mercado Pago nas configurações'
     };
-  } else {
+  }
+
+  if (config.accessToken.length < 10) {
     return {
       success: false,
       message: 'Token de acesso inválido',
       details: 'Token deve ter pelo menos 10 caracteres'
     };
   }
+
+  // Validar formato do token (deve começar com APP-)
+  if (!config.accessToken.startsWith('APP-') && !config.accessToken.startsWith('TEST-')) {
+    return {
+      success: false,
+      message: 'Formato do token inválido',
+      details: 'Token deve começar com APP- ou TEST-'
+    };
+  }
+
+  return {
+    success: true,
+    message: 'Configuração válida (modo offline)',
+    details: 'Backend não disponível - usando configuração local. Para funcionalidade completa, faça deploy das funções serverless.'
+  };
 };
