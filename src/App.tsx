@@ -19,13 +19,13 @@ const queryClient = new QueryClient();
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
   <SidebarProvider>
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="app-container flex w-full bg-background">
       <AppSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col main-content">
         <header className="h-14 border-b border-border bg-card flex items-center px-4">
           <SidebarTrigger />
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   </SidebarProvider>

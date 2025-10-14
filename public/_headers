@@ -5,6 +5,6 @@
   Access-Control-Allow-Headers: Content-Type, Authorization, x-signature, x-request-id
 
 /*
-  X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' *.googleapis.com *.gstatic.com *.google.com *.vercel.com *.vercel.sh *.stripe.com *.github.com
