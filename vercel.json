@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "api/mercadopago-webhook.js": {
+      "maxDuration": 10
+    },
+    "api/mercadopago-create-payment.js": {
+      "maxDuration": 15
+    },
+    "api/mercadopago-test.js": {
+      "maxDuration": 10
+    },
+    "api/mercadopago-qr-code.js": {
+      "maxDuration": 10
+    }
+  },
+  "env": {
+    "MERCADOPAGO_ACCESS_TOKEN": "@mercadopago_access_token"
+  }
+}

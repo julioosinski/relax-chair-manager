@@ -67,7 +67,7 @@ const Configuracoes = () => {
     supabaseKey: "",
     mercadopagoToken: "",
     mercadopagoPublicKey: "",
-    webhookUrl: "",
+    webhookUrl: "https://relax-chair-manager.vercel.app/api/mercadopago-webhook",
     systemName: "Sistema de Poltronas",
     systemVersion: "1.0.0",
     maintenanceMode: false,
