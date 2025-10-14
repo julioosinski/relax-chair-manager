@@ -14,7 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      logs: {
+        Row: {
+          created_at: string
+          id: number
+          message: string
+          poltrona_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          message: string
+          poltrona_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          message?: string
+          poltrona_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_poltrona_log"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas"
+            referencedColumns: ["poltrona_id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          payment_id: number
+          poltrona_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          payment_id: number
+          poltrona_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          payment_id?: number
+          poltrona_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_poltrona"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas"
+            referencedColumns: ["poltrona_id"]
+          },
+        ]
+      }
+      poltronas: {
+        Row: {
+          active: boolean
+          created_at: string
+          duration: number
+          id: string
+          ip: string
+          location: string
+          pix_key: string
+          poltrona_id: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          duration?: number
+          id?: string
+          ip: string
+          location: string
+          pix_key: string
+          poltrona_id: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          duration?: number
+          id?: string
+          ip?: string
+          location?: string
+          pix_key?: string
+          poltrona_id?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
