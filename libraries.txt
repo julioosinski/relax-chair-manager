@@ -1,0 +1,126 @@
+# Bibliotecas Necessárias para o ESP32 Massage Chair
+
+## Bibliotecas do Arduino IDE
+
+### 1. ArduinoJson
+- **Versão**: 6.21.3 ou superior
+- **Instalação**: 
+  - Arduino IDE → Tools → Manage Libraries
+  - Buscar por "ArduinoJson"
+  - Instalar versão mais recente
+- **Uso**: Para processar JSON das respostas do Supabase
+
+### 2. ESP32 Board Package
+- **Instalação**:
+  - Arduino IDE → File → Preferences
+  - Adicionar URL: `https://dl.espressif.com/dl/package_esp32_index.json`
+  - Tools → Board → Boards Manager
+  - Buscar por "ESP32" e instalar
+
+## Bibliotecas Já Incluídas no ESP32
+
+### WiFi
+- **Uso**: Conexão WiFi e portal de captura
+- **Incluída**: Sim
+
+### WebServer
+- **Uso**: Servidor web para configuração
+- **Incluída**: Sim
+
+### HTTPClient
+- **Uso**: Comunicação HTTP com Supabase
+- **Incluída**: Sim
+
+### Preferences
+- **Uso**: Armazenamento de configurações na EEPROM
+- **Incluída**: Sim
+
+### SPIFFS
+- **Uso**: Sistema de arquivos (opcional)
+- **Incluída**: Sim
+
+## Configuração do Arduino IDE
+
+### 1. Configurações da Placa
+```
+Board: "ESP32 Dev Module"
+Upload Speed: "115200"
+CPU Frequency: "240MHz (WiFi/BT)"
+Flash Frequency: "80MHz"
+Flash Mode: "QIO"
+Flash Size: "4MB (32Mb)"
+Partition Scheme: "Default 4MB with spiffs"
+Core Debug Level: "None"
+```
+
+### 2. Configurações de Compilação
+```
+Arduino IDE Version: 2.0.0 ou superior
+Compiler: ESP32 Arduino Core 2.0.0 ou superior
+```
+
+## Estrutura de Arquivos
+
+```
+projeto_esp32/
+├── esp32_massage_chair.ino    # Código principal
+├── README_ESP32.md           # Documentação
+├── libraries.txt             # Este arquivo
+└── config/
+    ├── wifi_config.h         # Configurações WiFi (opcional)
+    └── supabase_config.h     # Configurações Supabase (opcional)
+```
+
+## Dependências do Sistema
+
+### Hardware
+- ESP32 DevKit V1 ou similar
+- 4x Relés 12V (módulo relé)
+- 4x Motores de massagem 12V
+- 2x Botões push
+- 1x LED
+- Resistores (220Ω, 10kΩ)
+- Fonte 12V/5A
+- Fonte 5V/2A
+
+### Software
+- Arduino IDE 2.0.0+
+- ESP32 Arduino Core 2.0.0+
+- ArduinoJson Library 6.21.3+
+
+## Configuração de Rede
+
+### WiFi
+- **SSID**: Configurável via portal
+- **Senha**: Configurável via portal
+- **Portal**: `Poltrona-Massagem-{ID}`
+- **Senha Portal**: `12345678`
+
+### Supabase
+- **URL**: `https://{projeto}.supabase.co`
+- **Chave**: Chave anônima do projeto
+- **Tabelas**: poltronas, payments, logs
+
+## Troubleshooting
+
+### Erro de Compilação
+1. Verifique se todas as bibliotecas estão instaladas
+2. Confirme a versão do ESP32 Arduino Core
+3. Limpe o cache de compilação (Sketch → Clean)
+
+### Erro de Upload
+1. Mantenha pressionado BOOT durante upload
+2. Verifique a porta serial
+3. Confirme a velocidade de upload (115200)
+
+### Erro de Conexão
+1. Verifique as credenciais WiFi
+2. Confirme a URL do Supabase
+3. Teste a conectividade de rede
+
+## Links Úteis
+
+- [ArduinoJson Documentation](https://arduinojson.org/)
+- [ESP32 Arduino Core](https://github.com/espressif/arduino-esp32)
+- [Supabase Documentation](https://supabase.com/docs)
+- [ESP32 Pinout Reference](https://randomnerdtutorials.com/esp32-pinout-reference-gpios/)
