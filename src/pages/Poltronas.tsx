@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { EditPoltronaDialog } from "@/components/EditPoltronaDialog";
+import QRCodeDisplay from "@/components/QRCodeDisplay";
 
 interface Poltrona {
   poltrona_id: string;
@@ -24,6 +25,9 @@ interface Poltrona {
   duration: number;
   location: string;
   active: boolean;
+  qr_code_data?: string;
+  payment_id?: string;
+  mercadopago_token?: string;
 }
 
 const Poltronas = () => {
@@ -114,6 +118,32 @@ const Poltronas = () => {
     setTimeout(() => {
       toast.success(`✅ Poltrona ${poltronaId} acionada para teste`);
     }, 1000);
+  };
+
+  const handleGenerateQR = async (poltronaId: string) => {
+    try {
+      // Aqui você implementaria a chamada para gerar o QR code via API
+      // Por enquanto, vamos simular
+      toast.info(`Gerando QR Code para poltrona ${poltronaId}...`);
+      
+      // Simular delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Atualizar a poltrona com dados simulados
+      setPoltronas(prev => prev.map(p => 
+        p.poltrona_id === poltronaId 
+          ? { 
+              ...p, 
+              qr_code_data: `00020126580014br.gov.bcb.pix0136${Math.random().toString(36).substring(2, 15)}520400005303986540510.005802BR5913Poltrona Massagem6009Sao Paulo62070503***6304`,
+              payment_id: `MP${Date.now()}`
+            }
+          : p
+      ));
+      
+      toast.success(`✅ QR Code gerado para poltrona ${poltronaId}`);
+    } catch (error) {
+      toast.error(`❌ Erro ao gerar QR Code para poltrona ${poltronaId}`);
+    }
   };
 
   return (
@@ -236,73 +266,82 @@ const Poltronas = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {poltronas.map((poltrona) => (
-          <Card
-            key={poltrona.poltrona_id}
-            className="border-border bg-card hover:border-primary transition-colors"
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Poltrona {poltrona.poltrona_id}</span>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    poltrona.active
-                      ? "bg-accent/20 text-accent"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {poltrona.active ? "Ativa" : "Inativa"}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">IP:</span>
-                  <span className="font-mono">{poltrona.ip}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor:</span>
-                  <span className="font-bold text-accent">
-                    R$ {poltrona.price.toFixed(2)}
+          <div key={poltrona.poltrona_id} className="space-y-4">
+            {/* Card Principal da Poltrona */}
+            <Card className="border-border bg-card hover:border-primary transition-colors">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Poltrona {poltrona.poltrona_id}</span>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      poltrona.active
+                        ? "bg-accent/20 text-accent"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {poltrona.active ? "Ativa" : "Inativa"}
                   </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">IP:</span>
+                    <span className="font-mono">{poltrona.ip}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Valor:</span>
+                    <span className="font-bold text-accent">
+                      R$ {poltrona.price.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Duração:</span>
+                    <span>{poltrona.duration}s</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Local:</span>
+                    <span className="text-right">{poltrona.location}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Duração:</span>
-                  <span>{poltrona.duration}s</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleTestStart(poltrona.poltrona_id)}
+                  >
+                    <Play className="h-3 w-3 mr-1" />
+                    Teste
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setEditingPoltrona(poltrona)}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Editar
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <FileText className="h-3 w-3 mr-1" />
+                    Ficha
+                  </Button>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Local:</span>
-                  <span className="text-right">{poltrona.location}</span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleTestStart(poltrona.poltrona_id)}
-                >
-                  <Play className="h-3 w-3 mr-1" />
-                  Teste
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setEditingPoltrona(poltrona)}
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Editar
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Ficha
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Card do QR Code */}
+            <QRCodeDisplay
+              poltronaId={poltrona.poltrona_id}
+              qrCodeData={poltrona.qr_code_data}
+              paymentId={poltrona.payment_id}
+              price={poltrona.price}
+              onGenerateQR={() => handleGenerateQR(poltrona.poltrona_id)}
+            />
+          </div>
         ))}
       </div>
 

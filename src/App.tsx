@@ -12,6 +12,7 @@ import Poltronas from "./pages/Poltronas";
 import Pagamentos from "./pages/Pagamentos";
 import Relatorios from "./pages/Relatorios";
 import Logs from "./pages/Logs";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Logs />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Configuracoes />
                 </AppLayout>
               </ProtectedRoute>
             }
