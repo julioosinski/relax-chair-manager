@@ -253,11 +253,14 @@ void handleConfigPage() {
         errorDiv.style.display = 'none';
         
         const response = await fetch(
-          SUPABASE_URL + '/rest/v1/poltronas?select=poltrona_id,location&active=eq.true&order=poltrona_id',
+          SUPABASE_URL + '/rest/v1/poltronas?select=poltrona_id,location&active=eq.true&order=poltrona_id.asc',
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Content-Type': 'application/json'
+              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Prefer': 'return=representation'
             }
           }
         );
