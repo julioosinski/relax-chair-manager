@@ -353,7 +353,7 @@ const Configuracoes = () => {
               <div className="space-y-2">
                 <p className="font-medium">Para desenvolvimento e testes, use um <strong>Token de TESTE</strong>:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
-                  <li>Token de TESTE começa com: <code className="bg-muted px-1 py-0.5 rounded">TEST-</code></li>
+                  <li>Obtenha seu token na aba <strong>"Teste"</strong> do Painel de Desenvolvedores</li>
                   <li>Permite criar pagamentos PIX sem cobrar de verdade</li>
                   <li>Ideal para testar a integração</li>
                 </ul>
@@ -370,9 +370,8 @@ const Configuracoes = () => {
 
               <div className="p-3 bg-background rounded-lg border mt-3">
                 <p className="text-xs text-muted-foreground">
-                  <strong>Erro atual:</strong> Se você está recebendo "Unauthorized use of live credentials", 
-                  significa que está usando um token de produção mas a conta não está ativada. 
-                  Solução: Use um token de TESTE ou ative sua conta para produção.
+                  <strong>Nota importante:</strong> O formato do token não indica mais se é teste ou produção. 
+                  Certifique-se de copiar o token correto da aba correspondente no painel do Mercado Pago.
                 </p>
               </div>
             </CardContent>

@@ -27,14 +27,6 @@ serve(async (req) => {
       );
     }
 
-    // Verificar tipo de token (TEST ou PROD)
-    const isTestToken = accessToken.startsWith('TEST-');
-    console.log(`Using ${isTestToken ? 'TEST' : 'PRODUCTION'} token`);
-    
-    if (!isTestToken) {
-      console.warn('⚠️ WARNING: Using PRODUCTION token - ensure account is activated for production');
-    }
-
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { poltronaId } = await req.json();
 
@@ -128,7 +120,7 @@ serve(async (req) => {
       // Tratar erro específico de credenciais não autorizadas
       if (data.message === 'Unauthorized use of live credentials') {
         errorMessage = 'Token de produção não autorizado';
-        userMessage = 'Use um token de TESTE do Mercado Pago (começa com TEST-) ou ative sua conta para produção no painel do Mercado Pago';
+        userMessage = 'Use um token de TESTE do Mercado Pago (obtido na aba "Teste" do painel de desenvolvedores) ou ative sua conta para produção no painel do Mercado Pago';
       }
       
       return new Response(
