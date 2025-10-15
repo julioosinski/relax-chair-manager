@@ -55,6 +55,18 @@ serve(async (req) => {
       );
     }
 
+    // Verificar se é notificação de teste (live_mode: false e ID fictício)
+    if (webhookData.live_mode === false && webhookData.id) {
+      console.log('Test webhook received - returning success');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Test webhook received successfully' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Buscar detalhes do pagamento no Mercado Pago
     const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
