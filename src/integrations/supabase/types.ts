@@ -208,6 +208,8 @@ export type Database = {
           last_ping: string | null
           poltrona_id: string
           updated_at: string
+          uptime_seconds: number | null
+          wifi_signal: number | null
         }
         Insert: {
           error_message?: string | null
@@ -216,6 +218,8 @@ export type Database = {
           last_ping?: string | null
           poltrona_id: string
           updated_at?: string
+          uptime_seconds?: number | null
+          wifi_signal?: number | null
         }
         Update: {
           error_message?: string | null
@@ -224,6 +228,8 @@ export type Database = {
           last_ping?: string | null
           poltrona_id?: string
           updated_at?: string
+          uptime_seconds?: number | null
+          wifi_signal?: number | null
         }
         Relationships: [
           {

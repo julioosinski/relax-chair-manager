@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.check-payment-polling]
 verify_jwt = false
+
+[functions.test-esp32-relay]
+verify_jwt = true
