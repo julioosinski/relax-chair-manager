@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       logs: {
         Row: {
           created_at: string
@@ -95,6 +134,105 @@ export type Database = {
           },
         ]
       }
+      poltrona_maintenance: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          maintenance_type: string
+          notes: string | null
+          performed_by: string | null
+          poltrona_id: string
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          maintenance_type: string
+          notes?: string | null
+          performed_by?: string | null
+          poltrona_id: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          maintenance_type?: string
+          notes?: string | null
+          performed_by?: string | null
+          poltrona_id?: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_poltrona"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas"
+            referencedColumns: ["poltrona_id"]
+          },
+          {
+            foreignKeyName: "fk_poltrona"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas_public"
+            referencedColumns: ["poltrona_id"]
+          },
+        ]
+      }
+      poltrona_status: {
+        Row: {
+          error_message: string | null
+          firmware_version: string | null
+          is_online: boolean
+          last_ping: string | null
+          poltrona_id: string
+          updated_at: string
+        }
+        Insert: {
+          error_message?: string | null
+          firmware_version?: string | null
+          is_online?: boolean
+          last_ping?: string | null
+          poltrona_id: string
+          updated_at?: string
+        }
+        Update: {
+          error_message?: string | null
+          firmware_version?: string | null
+          is_online?: boolean
+          last_ping?: string | null
+          poltrona_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_poltrona_status"
+            columns: ["poltrona_id"]
+            isOneToOne: true
+            referencedRelation: "poltronas"
+            referencedColumns: ["poltrona_id"]
+          },
+          {
+            foreignKeyName: "fk_poltrona_status"
+            columns: ["poltrona_id"]
+            isOneToOne: true
+            referencedRelation: "poltronas_public"
+            referencedColumns: ["poltrona_id"]
+          },
+        ]
+      }
       poltronas: {
         Row: {
           active: boolean
@@ -134,6 +272,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -160,6 +328,31 @@ export type Database = {
       }
     }
     Views: {
+      payment_stats: {
+        Row: {
+          avg_amount: number | null
+          date: string | null
+          poltrona_id: string | null
+          total_amount: number | null
+          total_payments: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_poltrona"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas"
+            referencedColumns: ["poltrona_id"]
+          },
+          {
+            foreignKeyName: "fk_poltrona"
+            columns: ["poltrona_id"]
+            isOneToOne: false
+            referencedRelation: "poltronas_public"
+            referencedColumns: ["poltrona_id"]
+          },
+        ]
+      }
       poltronas_public: {
         Row: {
           active: boolean | null

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Activity, Clock, RefreshCw, Shield } from "lucide-react";
+import { DollarSign, TrendingUp, Activity, Clock, RefreshCw, Shield, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { User } from "@supabase/supabase-js";
+import { useRealtimePayments } from "@/hooks/useRealtimePayments";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { Badge } from "@/components/ui/badge";
 
 interface Stats {
   faturamentoHoje: number;
@@ -13,9 +16,16 @@ interface Stats {
   valorMedio: number;
 }
 
+interface ChartData {
+  date: string;
+  amount: number;
+  count: number;
+}
+
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const { isAdmin, isLoading: roleLoading } = useUserRole(user);
+  const { isConnected } = useRealtimePayments();
   
   const [stats, setStats] = useState<Stats>({
     faturamentoHoje: 0,
@@ -25,6 +35,7 @@ const Dashboard = () => {
   });
 
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -36,6 +47,7 @@ const Dashboard = () => {
     if (isAdmin) {
       fetchStats();
       fetchRecentPayments();
+      fetchChartData();
 
       const interval = setInterval(() => {
         checkNewPayments();
@@ -99,6 +111,31 @@ const Dashboard = () => {
       setRecentPayments(data || []);
     } catch (error: any) {
       console.error("Error fetching recent payments:", error);
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("payment_stats")
+        .select("*")
+        .order("date", { ascending: true })
+        .limit(7);
+
+      if (error) {
+        if (error.code === '42501') return;
+        throw error;
+      }
+
+      const formatted = (data || []).map(item => ({
+        date: new Date(item.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+        amount: Number(item.total_amount),
+        count: Number(item.total_payments)
+      }));
+
+      setChartData(formatted);
+    } catch (error: any) {
+      console.error("Error fetching chart data:", error);
     }
   };
 
@@ -181,13 +218,28 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Visão geral do sistema de poltronas de massagem
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Visão geral do sistema de poltronas de massagem
+          </p>
+        </div>
+        <Badge variant={isConnected ? "default" : "secondary"} className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <Wifi className="h-3 w-3" />
+              Conectado (Tempo Real)
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3 w-3" />
+              Desconectado
+            </>
+          )}
+        </Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -210,6 +262,51 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {chartData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-border bg-card/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Faturamento (7 dias)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Ativações (7 dias)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip 
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--accent))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="border-border bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-4">

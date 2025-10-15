@@ -19,6 +19,7 @@ import QRCodeDisplay from "@/components/QRCodeDisplay";
 import { generateCompleteQRCode } from "@/api/mercadopago";
 import { useUserRole } from "@/hooks/useUserRole";
 import { poltronaSchema, type PoltronaFormData } from "@/lib/validations";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { z } from "zod";
 import { User } from "@supabase/supabase-js";
 
@@ -43,6 +44,7 @@ const Poltronas = () => {
   const [user, setUser] = useState<User | null>(null);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof PoltronaFormData, string>>>({});
   const { isAdmin, isLoading: roleLoading } = useUserRole(user);
+  const { logAction } = useAuditLog();
   
   const [formData, setFormData] = useState<Poltrona>({
     poltrona_id: "",
@@ -118,6 +120,14 @@ const Poltronas = () => {
         }
         return;
       }
+
+      // Log audit action
+      await logAction({
+        action: "CREATE",
+        entity_type: "poltrona",
+        entity_id: formData.poltrona_id,
+        new_values: formData
+      });
 
       toast.success("✅ Poltrona cadastrada com sucesso");
       setDialogOpen(false);

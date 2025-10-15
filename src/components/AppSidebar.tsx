@@ -1,4 +1,4 @@
-import { Home, Armchair, CreditCard, BarChart3, FileText, Settings, LogOut } from "lucide-react";
+import { Home, Armchair, CreditCard, BarChart3, FileText, Settings, LogOut, Shield, Wrench } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,7 +19,9 @@ const menuItems = [
   { title: "Poltronas", url: "/poltronas", icon: Armchair },
   { title: "Pagamentos", url: "/pagamentos", icon: CreditCard },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
+  { title: "Manutenção", url: "/manutencao", icon: Wrench },
   { title: "Logs", url: "/logs", icon: FileText },
+  { title: "Auditoria", url: "/auditoria", icon: Shield },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 

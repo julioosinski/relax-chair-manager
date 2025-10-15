@@ -13,6 +13,8 @@ import Pagamentos from "./pages/Pagamentos";
 import Relatorios from "./pages/Relatorios";
 import Logs from "./pages/Logs";
 import Configuracoes from "./pages/Configuracoes";
+import Auditoria from "./pages/Auditoria";
+import Manutencao from "./pages/Manutencao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -102,6 +104,26 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Configuracoes />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/auditoria"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Auditoria />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manutencao"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Manutencao />
                 </AppLayout>
               </ProtectedRoute>
             }
