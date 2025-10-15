@@ -342,10 +342,10 @@ void handleConfigPage() {
       <input type='password' name='wifiPassword' value=')" + config.wifiPassword + R"(' required>
       
       <label>Supabase URL:</label>
-      <input type='text' name='supabaseUrl' value=')" + config.supabaseUrl + R"(' required>
+      <input type='text' name='supabaseUrl' value=')" + (config.supabaseUrl.length() > 0 ? config.supabaseUrl : "https://pplaglcevtvlpzdnmvqd.supabase.co") + R"(' required>
       
       <label>Supabase Key:</label>
-      <input type='text' name='supabaseKey' value=')" + config.supabaseKey + R"(' required>
+      <input type='text' name='supabaseKey' value=')" + (config.supabaseKey.length() > 0 ? config.supabaseKey : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGFnbGNldnR2bHB6ZG5tdnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzOTYxOTgsImV4cCI6MjA3NTk3MjE5OH0.XE9rN4KAWT7Ng_Y-otAFZlP3j4bdRAt5qYh-SIwuFCw") + R"(' required>
       
       <label>Duração da Massagem (segundos):</label>
       <input type='number' name='duration' value=')" + String(config.duration) + R"(' required>
