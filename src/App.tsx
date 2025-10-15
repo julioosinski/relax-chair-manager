@@ -16,6 +16,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Auditoria from "./pages/Auditoria";
 import Manutencao from "./pages/Manutencao";
 import NotFound from "./pages/NotFound";
+import PublicPayment from "./pages/PublicPayment";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/pay/:poltronaId" element={<PublicPayment />} />
           <Route
             path="/"
             element={
