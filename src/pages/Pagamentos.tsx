@@ -11,6 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { User } from "@supabase/supabase-js";
+import { useUserRole } from "@/hooks/useUserRole";
+import { ShieldAlert } from "lucide-react";
 
 interface Payment {
   payment_id: number;
@@ -18,16 +21,28 @@ interface Payment {
   amount: number;
   status: string;
   created_at: string;
-  approved_at: string;
+  approved_at: string | null;
 }
 
 const Pagamentos = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const { isAdmin, isLoading: roleLoading } = useUserRole(user);
 
   useEffect(() => {
-    fetchPayments();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!roleLoading && isAdmin) {
+      fetchPayments();
+    } else if (!roleLoading && !isAdmin) {
+      setLoading(false);
+    }
+  }, [isAdmin, roleLoading]);
 
   const fetchPayments = async () => {
     try {
@@ -36,15 +51,45 @@ const Pagamentos = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501') {
+          setPayments([]);
+          return;
+        }
+        throw error;
+      }
       setPayments(data || []);
     } catch (error: any) {
       toast.error("Erro ao carregar pagamentos");
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (roleLoading || loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-pulse">💳</div>
+          <p className="text-muted-foreground">Carregando pagamentos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="max-w-md w-full bg-card border border-border rounded-lg p-8 text-center">
+          <ShieldAlert className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Acesso Restrito</h1>
+          <p className="text-muted-foreground mb-4">
+            Apenas administradores podem visualizar pagamentos.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
@@ -74,11 +119,7 @@ const Pagamentos = () => {
           <CardTitle>Todas as Transações</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-center text-muted-foreground py-8">
-              Carregando...
-            </p>
-          ) : payments.length === 0 ? (
+          {payments.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Nenhum pagamento encontrado
             </p>

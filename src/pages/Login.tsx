@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { loginSchema } from "@/lib/validations";
+import { z } from "zod";
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   useEffect(() => {
     // Check if user is already logged in
@@ -23,20 +26,49 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validação com Zod
+    try {
+      loginSchema.parse({ email, password });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: { email?: string; password?: string } = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as 'email' | 'password'] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Mensagens de erro amigáveis
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Email ou senha incorretos");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Por favor, confirme seu email antes de fazer login");
+        } else {
+          toast.error("Erro ao fazer login. Tente novamente.");
+        }
+        return;
+      }
 
       toast.success("Login realizado com sucesso!");
       navigate("/");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao fazer login");
+    } catch (error) {
+      toast.error("Erro inesperado ao fazer login");
     } finally {
       setLoading(false);
     }
@@ -65,10 +97,17 @@ const Login = () => {
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors({ ...errors, email: undefined });
+                }}
+                className={`bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base ${
+                  errors.email ? 'border-red-500' : ''
+                }`}
               />
+              {errors.email && (
+                <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -80,10 +119,17 @@ const Login = () => {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrors({ ...errors, password: undefined });
+                }}
+                className={`bg-background/50 border-border/50 focus:border-primary focus:ring-primary/20 h-12 text-base ${
+                  errors.password ? 'border-red-500' : ''
+                }`}
               />
+              {errors.password && (
+                <p className="text-xs text-red-500 mt-1">{errors.password}</p>
+              )}
             </div>
 
             <Button

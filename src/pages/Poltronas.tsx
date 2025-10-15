@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Play, Edit, FileText } from "lucide-react";
+import { Plus, Play, Edit, FileText, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,10 @@ import { Switch } from "@/components/ui/switch";
 import { EditPoltronaDialog } from "@/components/EditPoltronaDialog";
 import QRCodeDisplay from "@/components/QRCodeDisplay";
 import { generateCompleteQRCode } from "@/api/mercadopago";
+import { useUserRole } from "@/hooks/useUserRole";
+import { poltronaSchema, type PoltronaFormData } from "@/lib/validations";
+import { z } from "zod";
+import { User } from "@supabase/supabase-js";
 
 interface Poltrona {
   poltrona_id: string;
@@ -36,6 +40,10 @@ const Poltronas = () => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPoltrona, setEditingPoltrona] = useState<Poltrona | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof PoltronaFormData, string>>>({});
+  const { isAdmin, isLoading: roleLoading } = useUserRole(user);
+  
   const [formData, setFormData] = useState<Poltrona>({
     poltrona_id: "",
     ip: "",
@@ -47,6 +55,11 @@ const Poltronas = () => {
   });
 
   useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+    
     fetchPoltronas();
   }, []);
 
@@ -61,25 +74,33 @@ const Poltronas = () => {
       setPoltronas(data || []);
     } catch (error: any) {
       toast.error("Erro ao carregar poltronas");
-      console.error(error);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
     
-    // Validação
-    if (!formData.poltrona_id.trim()) {
-      toast.error("ID da poltrona é obrigatório");
+    if (!isAdmin) {
+      toast.error("Apenas administradores podem cadastrar poltronas");
       return;
     }
-    if (formData.price <= 0) {
-      toast.error("Valor deve ser maior que zero");
-      return;
-    }
-    if (formData.duration <= 0) {
-      toast.error("Duração deve ser maior que zero");
-      return;
+    
+    // Validação com Zod
+    try {
+      poltronaSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Partial<Record<keyof PoltronaFormData, string>> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as keyof PoltronaFormData] = err.message;
+          }
+        });
+        setFormErrors(errors);
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
     }
 
     setLoading(true);
@@ -87,7 +108,16 @@ const Poltronas = () => {
     try {
       const { error } = await supabase.from("poltronas").insert([formData]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("Já existe uma poltrona com este ID");
+        } else if (error.code === "42501") {
+          toast.error("Você não tem permissão para cadastrar poltronas");
+        } else {
+          toast.error("Erro ao cadastrar poltrona");
+        }
+        return;
+      }
 
       toast.success("✅ Poltrona cadastrada com sucesso");
       setDialogOpen(false);
@@ -102,12 +132,7 @@ const Poltronas = () => {
         active: true,
       });
     } catch (error: any) {
-      if (error.code === "23505") {
-        toast.error("Já existe uma poltrona com este ID");
-      } else {
-        toast.error("Erro ao cadastrar poltrona");
-      }
-      console.error(error);
+      toast.error("Erro ao cadastrar poltrona");
     } finally {
       setLoading(false);
     }
@@ -131,33 +156,16 @@ const Poltronas = () => {
 
       toast.info(`Gerando QR Code para poltrona ${poltronaId}...`);
       
-      // Carregar configurações do Mercado Pago
-      const systemConfig = localStorage.getItem('systemConfig');
-      if (!systemConfig) {
-        toast.error("Configurações do Mercado Pago não encontradas");
-        return;
-      }
-
-      const config = JSON.parse(systemConfig);
-      if (!config.mercadopagoToken) {
-        toast.error("Token do Mercado Pago não configurado");
-        return;
-      }
-
-      // Gerar QR code usando a API proxy
+      // Não precisa mais de configurações do localStorage
+      // O token fica seguro no servidor (edge function)
       const result = await generateCompleteQRCode(
-        {
-          accessToken: config.mercadopagoToken,
-          publicKey: config.mercadopagoPublicKey,
-          webhookUrl: config.webhookUrl
-        },
+        {}, // Config vazio - token vem do servidor
         poltronaId,
         poltrona.price,
         poltrona.location
       );
 
       if (result.success && result.paymentId && result.qrCode) {
-        // Atualizar a poltrona com os dados reais
         setPoltronas(prev => prev.map(p => 
           p.poltrona_id === poltronaId 
             ? { 
@@ -173,7 +181,6 @@ const Poltronas = () => {
         toast.error(`❌ ${result.message}`);
       }
     } catch (error) {
-      console.error('Erro ao gerar QR Code:', error);
       toast.error(`❌ Erro ao gerar QR Code para poltrona ${poltronaId}`);
     }
   };
@@ -189,7 +196,10 @@ const Poltronas = () => {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary">
+            <Button 
+              className="bg-gradient-primary"
+              disabled={!isAdmin || roleLoading}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Nova Poltrona
             </Button>
@@ -198,42 +208,63 @@ const Poltronas = () => {
             <DialogHeader>
               <DialogTitle>Cadastrar Nova Poltrona</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {!isAdmin ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ShieldAlert className="h-12 w-12 text-amber-500 mb-4" />
+                <p className="text-lg font-semibold mb-2">Acesso Restrito</p>
+                <p className="text-sm text-muted-foreground">
+                  Apenas administradores podem cadastrar poltronas
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="poltrona_id">ID da Poltrona</Label>
                 <Input
                   id="poltrona_id"
                   value={formData.poltrona_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, poltrona_id: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, poltrona_id: e.target.value });
+                    setFormErrors({ ...formErrors, poltrona_id: undefined });
+                  }}
                   placeholder="p1"
-                  required
+                  className={formErrors.poltrona_id ? 'border-red-500' : ''}
                 />
+                {formErrors.poltrona_id && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.poltrona_id}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ip">IP do ESP32</Label>
                 <Input
                   id="ip"
                   value={formData.ip}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ip: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, ip: e.target.value });
+                    setFormErrors({ ...formErrors, ip: undefined });
+                  }}
                   placeholder="192.168.0.100"
-                  required
+                  className={formErrors.ip ? 'border-red-500' : ''}
                 />
+                {formErrors.ip && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.ip}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pix_key">Chave PIX</Label>
                 <Input
                   id="pix_key"
                   value={formData.pix_key}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pix_key: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, pix_key: e.target.value });
+                    setFormErrors({ ...formErrors, pix_key: undefined });
+                  }}
                   placeholder="chavepix@email.com"
-                  required
+                  className={formErrors.pix_key ? 'border-red-500' : ''}
                 />
+                {formErrors.pix_key && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.pix_key}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -273,12 +304,16 @@ const Poltronas = () => {
                 <Input
                   id="location"
                   value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, location: e.target.value });
+                    setFormErrors({ ...formErrors, location: undefined });
+                  }}
                   placeholder="Shopping A - Piso 2"
-                  required
+                  className={formErrors.location ? 'border-red-500' : ''}
                 />
+                {formErrors.location && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.location}</p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -294,6 +329,7 @@ const Poltronas = () => {
                 {loading ? "Cadastrando..." : "Cadastrar Poltrona"}
               </Button>
             </form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -353,6 +389,7 @@ const Poltronas = () => {
                     size="sm"
                     className="flex-1"
                     onClick={() => setEditingPoltrona(poltrona)}
+                    disabled={!isAdmin}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Editar
