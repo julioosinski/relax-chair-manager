@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.0.0";
+const char* FIRMWARE_VERSION = "2.1.0";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -233,7 +233,80 @@ void handleConfigPage() {
     button { background: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; width: 100%; font-size: 16px; }
     button:hover { background: #45a049; }
     .info { background: #e7f3ff; padding: 10px; border-left: 4px solid #2196F3; margin-bottom: 20px; }
+    .loading { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; display: none; }
+    .error { background: #f8d7da; padding: 10px; border-left: 4px solid #dc3545; margin: 10px 0; display: none; }
+    .hidden { display: none; }
+    .link-button { background: none; border: none; color: #2196F3; text-decoration: underline; cursor: pointer; padding: 0; font-size: 14px; margin-top: 5px; }
   </style>
+  <script>
+    const SUPABASE_URL = 'https://pplaglcevtvlpzdnmvqd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGFnbGNldnR2bHB6ZG5tdnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzOTYxOTgsImV4cCI6MjA3NTk3MjE5OH0.XE9rN4KAWT7Ng_Y-otAFZlP3j4bdRAt5qYh-SIwuFCw';
+    
+    async function loadPoltronas() {
+      const selectElement = document.getElementById('poltronaSelect');
+      const manualDiv = document.getElementById('poltronaManual');
+      const loadingDiv = document.getElementById('loading');
+      const errorDiv = document.getElementById('error');
+      
+      try {
+        loadingDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+        
+        const response = await fetch(
+          SUPABASE_URL + '/rest/v1/poltronas?select=poltrona_id,location&active=eq.true&order=poltrona_id',
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (!response.ok) throw new Error('Falha ao carregar poltronas');
+        
+        const poltronas = await response.json();
+        
+        selectElement.innerHTML = '<option value="">-- Selecione uma poltrona --</option>';
+        poltronas.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.poltrona_id;
+          option.textContent = p.poltrona_id + ' - ' + p.location;
+          selectElement.appendChild(option);
+        });
+        
+        selectElement.innerHTML += '<option value="__manual__">✏️ Digitar manualmente</option>';
+        
+        loadingDiv.style.display = 'none';
+        selectElement.style.display = 'block';
+        
+      } catch (error) {
+        console.error('Erro:', error);
+        loadingDiv.style.display = 'none';
+        errorDiv.style.display = 'block';
+        showManualInput();
+      }
+    }
+    
+    function handlePoltronaChange() {
+      const selectElement = document.getElementById('poltronaSelect');
+      if (selectElement.value === '__manual__') {
+        showManualInput();
+      }
+    }
+    
+    function showManualInput() {
+      document.getElementById('poltronaSelect').style.display = 'none';
+      document.getElementById('poltronaManual').style.display = 'block';
+    }
+    
+    function showDropdown() {
+      document.getElementById('poltronaSelect').style.display = 'block';
+      document.getElementById('poltronaManual').style.display = 'none';
+      document.getElementById('manualInput').value = '';
+    }
+    
+    window.addEventListener('load', loadPoltronas);
+  </script>
 </head>
 <body>
   <div class='container'>
@@ -242,9 +315,25 @@ void handleConfigPage() {
       <strong>Firmware:</strong> )" + String(FIRMWARE_VERSION) + R"(<br>
       <strong>MAC:</strong> )" + String((uint32_t)ESP.getEfuseMac(), HEX) + R"(
     </div>
+    
+    <div id='loading' class='loading'>
+      ⏳ Carregando poltronas disponíveis...
+    </div>
+    
+    <div id='error' class='error'>
+      ⚠️ Não foi possível carregar a lista. Use o campo manual abaixo.
+    </div>
+    
     <form action='/save' method='POST'>
-      <label>ID da Poltrona:</label>
-      <input type='text' name='poltronaId' value=')" + config.poltronaId + R"(' required>
+      <label>Selecione a Poltrona:</label>
+      <select id='poltronaSelect' name='poltronaId' onchange='handlePoltronaChange()' style='display:none;' required>
+      </select>
+      
+      <div id='poltronaManual' style='display:none;'>
+        <label>ID da Poltrona (Manual):</label>
+        <input type='text' id='manualInput' name='poltronaId' value=')" + config.poltronaId + R"('>
+        <button type='button' class='link-button' onclick='showDropdown()'>← Voltar para a lista</button>
+      </div>
       
       <label>WiFi SSID:</label>
       <input type='text' name='wifiSSID' value=')" + config.wifiSSID + R"(' required>
