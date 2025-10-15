@@ -377,6 +377,51 @@ const Configuracoes = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gerenciar Token */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Gerenciar Credenciais
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Access Token do Mercado Pago</Label>
+                <p className="text-sm text-muted-foreground">
+                  O token está armazenado de forma segura. Clique no botão abaixo para atualizar.
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    toast.info("Por favor, use o chat para atualizar o token do Mercado Pago. Digite: 'atualizar token mercadopago'");
+                  }}
+                  className="flex-1"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Atualizar Token
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open('https://www.mercadopago.com.br/developers/panel/app', '_blank')}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Obter Token
+                </Button>
+              </div>
+
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Como atualizar:</strong> Por segurança, use o chat para atualizar suas credenciais. 
+                  Digite "atualizar token mercadopago" e eu vou abrir um formulário seguro para você inserir o novo token.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Sistema */}
