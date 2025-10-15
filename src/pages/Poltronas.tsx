@@ -194,7 +194,12 @@ const Poltronas = () => {
 
         toast.success(`✅ QR Code Fixo Gerado - R$ ${result.amount}`);
       } else {
-        toast.error(result.message || "Erro ao gerar QR Code");
+        // Mostrar erro detalhado
+        const errorMsg = result.details || result.message || "Erro ao gerar QR Code";
+        toast.error(errorMsg, {
+          duration: 6000,
+        });
+        console.error('QR Code generation failed:', result);
       }
     } catch (error) {
       console.error('Error generating QR:', error);

@@ -75,7 +75,8 @@ export const generateCompleteQRCode = async (
       console.error('Edge function error:', error);
       return {
         success: false,
-        message: error.message || 'Erro ao chamar função de pagamento'
+        message: 'Erro ao chamar função de pagamento',
+        details: error.message
       };
     }
 
@@ -83,7 +84,8 @@ export const generateCompleteQRCode = async (
       console.error('Payment creation failed:', data);
       return {
         success: false,
-        message: data.message || 'Erro ao criar pagamento'
+        message: data.message || 'Erro ao criar pagamento',
+        details: data.details || data.message
       };
     }
 
@@ -102,7 +104,8 @@ export const generateCompleteQRCode = async (
     console.error('Error generating QR code:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Erro desconhecido ao gerar QR Code'
+      message: 'Erro ao gerar QR Code',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     };
   }
 };

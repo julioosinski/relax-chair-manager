@@ -340,6 +340,43 @@ const Configuracoes = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Alerta sobre Token do Mercado Pago */}
+          <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <AlertCircle className="h-5 w-5" />
+                Importante: Token do Mercado Pago
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="space-y-2">
+                <p className="font-medium">Para desenvolvimento e testes, use um <strong>Token de TESTE</strong>:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
+                  <li>Token de TESTE começa com: <code className="bg-muted px-1 py-0.5 rounded">TEST-</code></li>
+                  <li>Permite criar pagamentos PIX sem cobrar de verdade</li>
+                  <li>Ideal para testar a integração</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-2 pt-2 border-t">
+                <p className="font-medium">Para usar Token de PRODUÇÃO:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
+                  <li>Sua conta do Mercado Pago precisa estar <strong>ativada para produção</strong></li>
+                  <li>Acesse: <a href="https://www.mercadopago.com.br/developers" target="_blank" rel="noopener noreferrer" className="text-primary underline">Painel de Desenvolvedores do Mercado Pago</a></li>
+                  <li>Siga o processo de ativação da conta para produção</li>
+                </ul>
+              </div>
+
+              <div className="p-3 bg-background rounded-lg border mt-3">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Erro atual:</strong> Se você está recebendo "Unauthorized use of live credentials", 
+                  significa que está usando um token de produção mas a conta não está ativada. 
+                  Solução: Use um token de TESTE ou ative sua conta para produção.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Sistema */}

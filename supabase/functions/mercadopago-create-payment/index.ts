@@ -27,6 +27,14 @@ serve(async (req) => {
       );
     }
 
+    // Verificar tipo de token (TEST ou PROD)
+    const isTestToken = accessToken.startsWith('TEST-');
+    console.log(`Using ${isTestToken ? 'TEST' : 'PRODUCTION'} token`);
+    
+    if (!isTestToken) {
+      console.warn('⚠️ WARNING: Using PRODUCTION token - ensure account is activated for production');
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { poltronaId } = await req.json();
 
@@ -112,12 +120,23 @@ serve(async (req) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Mercado Pago API error:', data);
+      console.error('Mercado Pago API error:', JSON.stringify(data, null, 2));
+      
+      let errorMessage = 'Erro ao criar pagamento no Mercado Pago';
+      let userMessage = data.message || 'Erro desconhecido';
+      
+      // Tratar erro específico de credenciais não autorizadas
+      if (data.message === 'Unauthorized use of live credentials') {
+        errorMessage = 'Token de produção não autorizado';
+        userMessage = 'Use um token de TESTE do Mercado Pago (começa com TEST-) ou ative sua conta para produção no painel do Mercado Pago';
+      }
+      
       return new Response(
         JSON.stringify({
           success: false,
-          message: 'Erro ao criar pagamento no Mercado Pago',
-          details: data.message || `Status: ${response.status}`
+          message: errorMessage,
+          details: userMessage,
+          statusCode: response.status
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
