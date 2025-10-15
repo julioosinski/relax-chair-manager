@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { RefreshCw, Shield } from "lucide-react";
+import { RefreshCw, Shield, CalendarIcon } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { User } from "@supabase/supabase-js";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -25,6 +31,8 @@ const Relatorios = () => {
   const { isAdmin, isLoading: roleLoading } = useUserRole(user);
   const [stats, setStats] = useState<PoltronaStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState<Date>();
+  const [dateTo, setDateTo] = useState<Date>();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -36,14 +44,27 @@ const Relatorios = () => {
     if (isAdmin) {
       fetchStats();
     }
-  }, [isAdmin]);
+  }, [isAdmin, dateFrom, dateTo]);
 
   const fetchStats = async () => {
     try {
-      const { data: payments, error } = await supabase
+      let query = supabase
         .from("payments")
-        .select("poltrona_id, amount")
+        .select("poltrona_id, amount, created_at")
         .eq("status", "approved");
+
+      // Aplicar filtro de data se definido
+      if (dateFrom) {
+        query = query.gte("created_at", format(dateFrom, "yyyy-MM-dd"));
+      }
+      if (dateTo) {
+        // Adiciona um dia e usa 'lt' para incluir todo o dia final
+        const nextDay = new Date(dateTo);
+        nextDay.setDate(nextDay.getDate() + 1);
+        query = query.lt("created_at", format(nextDay, "yyyy-MM-dd"));
+      }
+
+      const { data: payments, error } = await query;
 
       if (error) {
         if (error.code === '42501') {
@@ -101,11 +122,74 @@ const Relatorios = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Relatórios</h1>
-        <p className="text-muted-foreground">
-          Análises e estatísticas detalhadas
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Relatórios</h1>
+          <p className="text-muted-foreground">
+            Análises e estatísticas detalhadas
+          </p>
+        </div>
+
+        {/* Filtros de Data */}
+        <div className="flex flex-wrap gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal",
+                  !dateFrom && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={dateFrom}
+                onSelect={setDateFrom}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal",
+                  !dateTo && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={dateTo}
+                onSelect={setDateTo}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDateFrom(undefined);
+                setDateTo(undefined);
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

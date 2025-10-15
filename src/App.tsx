@@ -15,6 +15,7 @@ import Logs from "./pages/Logs";
 import Configuracoes from "./pages/Configuracoes";
 import Auditoria from "./pages/Auditoria";
 import Manutencao from "./pages/Manutencao";
+import ESP32Config from "./pages/ESP32Config";
 import NotFound from "./pages/NotFound";
 import PublicPayment from "./pages/PublicPayment";
 
@@ -126,6 +127,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Manutencao />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/esp32-config"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ESP32Config />
                 </AppLayout>
               </ProtectedRoute>
             }

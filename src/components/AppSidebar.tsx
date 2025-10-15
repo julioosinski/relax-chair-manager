@@ -1,4 +1,4 @@
-import { Home, Armchair, CreditCard, BarChart3, FileText, Settings, LogOut, Shield, Wrench } from "lucide-react";
+import { Home, Armchair, CreditCard, BarChart3, FileText, Settings, LogOut, Shield, Wrench, Cpu } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Poltronas", url: "/poltronas", icon: Armchair },
+  { title: "Config ESP32", url: "/esp32-config", icon: Cpu },
   { title: "Pagamentos", url: "/pagamentos", icon: CreditCard },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
   { title: "Manutenção", url: "/manutencao", icon: Wrench },
