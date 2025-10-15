@@ -95,8 +95,11 @@ export type Database = {
           approved_at: string | null
           created_at: string
           id: string
+          notification_attempts: number | null
+          notified_at: string | null
           payment_id: number
           poltrona_id: string
+          processed: boolean | null
           status: string
         }
         Insert: {
@@ -104,8 +107,11 @@ export type Database = {
           approved_at?: string | null
           created_at?: string
           id?: string
+          notification_attempts?: number | null
+          notified_at?: string | null
           payment_id: number
           poltrona_id: string
+          processed?: boolean | null
           status?: string
         }
         Update: {
@@ -113,8 +119,11 @@ export type Database = {
           approved_at?: string | null
           created_at?: string
           id?: string
+          notification_attempts?: number | null
+          notified_at?: string | null
           payment_id?: number
           poltrona_id?: string
+          processed?: boolean | null
           status?: string
         }
         Relationships: [
@@ -241,9 +250,12 @@ export type Database = {
           id: string
           ip: string
           location: string
+          payment_id: string | null
           pix_key: string
           poltrona_id: string
           price: number
+          qr_code: string | null
+          qr_code_generated_at: string | null
           updated_at: string
         }
         Insert: {
@@ -253,9 +265,12 @@ export type Database = {
           id?: string
           ip: string
           location: string
+          payment_id?: string | null
           pix_key: string
           poltrona_id: string
           price?: number
+          qr_code?: string | null
+          qr_code_generated_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -265,9 +280,12 @@ export type Database = {
           id?: string
           ip?: string
           location?: string
+          payment_id?: string | null
           pix_key?: string
           poltrona_id?: string
           price?: number
+          qr_code?: string | null
+          qr_code_generated_at?: string | null
           updated_at?: string
         }
         Relationships: []

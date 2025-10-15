@@ -156,42 +156,51 @@ const Poltronas = () => {
     }, 1000);
   };
 
+  const [isGeneratingQR, setIsGeneratingQR] = useState<Record<string, boolean>>({});
+
   const handleGenerateQR = async (poltronaId: string) => {
     try {
-      const poltrona = poltronas.find(p => p.poltrona_id === poltronaId);
-      if (!poltrona) {
-        toast.error("Poltrona não encontrada");
-        return;
-      }
-
-      toast.info(`Gerando QR Code para poltrona ${poltronaId}...`);
+      setIsGeneratingQR(prev => ({ ...prev, [poltronaId]: true }));
       
-      // Não precisa mais de configurações do localStorage
-      // O token fica seguro no servidor (edge function)
-      const result = await generateCompleteQRCode(
-        {}, // Config vazio - token vem do servidor
-        poltronaId,
-        poltrona.price,
-        poltrona.location
-      );
+      const result = await generateCompleteQRCode(poltronaId);
 
-      if (result.success && result.paymentId && result.qrCode) {
-        setPoltronas(prev => prev.map(p => 
-          p.poltrona_id === poltronaId 
-            ? { 
-                ...p, 
-                qr_code_data: result.qrCode,
-                payment_id: result.paymentId
-              }
-            : p
-        ));
-        
-        toast.success(`✅ QR Code gerado para poltrona ${poltronaId}`);
+      if (result.success && result.qrCode && result.paymentId) {
+        // Atualizar no banco de dados
+        const { error: updateError } = await supabase
+          .from('poltronas')
+          .update({
+            qr_code: result.qrCode,
+            payment_id: result.paymentId,
+            qr_code_generated_at: new Date().toISOString()
+          })
+          .eq('poltrona_id', poltronaId);
+
+        if (updateError) {
+          console.error('Error updating poltrona:', updateError);
+        }
+
+        // Atualizar estado local
+        setPoltronas(prevPoltronas =>
+          prevPoltronas.map(p =>
+            p.poltrona_id === poltronaId
+              ? {
+                  ...p,
+                  qr_code_data: result.qrCode,
+                  payment_id: result.paymentId
+                }
+              : p
+          )
+        );
+
+        toast.success(`✅ QR Code Fixo Gerado - R$ ${result.amount}`);
       } else {
-        toast.error(`❌ ${result.message}`);
+        toast.error(result.message || "Erro ao gerar QR Code");
       }
     } catch (error) {
-      toast.error(`❌ Erro ao gerar QR Code para poltrona ${poltronaId}`);
+      console.error('Error generating QR:', error);
+      toast.error("Erro ao gerar QR Code fixo");
+    } finally {
+      setIsGeneratingQR(prev => ({ ...prev, [poltronaId]: false }));
     }
   };
 
@@ -419,6 +428,7 @@ const Poltronas = () => {
               paymentId={poltrona.payment_id}
               price={poltrona.price}
               onGenerateQR={() => handleGenerateQR(poltrona.poltrona_id)}
+              loading={isGeneratingQR[poltrona.poltrona_id] || false}
             />
           </div>
         ))}

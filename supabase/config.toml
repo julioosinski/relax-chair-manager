@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.mercadopago-test-connection]
 verify_jwt = true
+
+[functions.check-payment-status]
+verify_jwt = false

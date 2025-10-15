@@ -62,50 +62,47 @@ export const testMercadoPagoConnection = async (
  * O token do Mercado Pago nunca sai do servidor
  */
 export const generateCompleteQRCode = async (
-  config: MercadoPagoConfig,
-  poltronaId: string,
-  amount: number,
-  description: string
+  poltronaId: string
 ): Promise<PaymentResult> => {
   try {
+    console.log('Generating fixed QR Code via secure edge function:', { poltronaId });
+
     const { data, error } = await supabase.functions.invoke('mercadopago-create-payment', {
-      body: {
-        poltronaId,
-        amount,
-        description,
-        pixKey: '' // PIX key é obtida do backend
-      }
+      body: { poltronaId }
     });
 
     if (error) {
+      console.error('Edge function error:', error);
       return {
         success: false,
-        message: 'Erro ao comunicar com o servidor',
-        details: error.message
+        message: error.message || 'Erro ao chamar função de pagamento'
       };
     }
 
     if (!data.success) {
+      console.error('Payment creation failed:', data);
       return {
         success: false,
-        message: data.message || 'Erro ao gerar pagamento',
-        details: data.details
+        message: data.message || 'Erro ao criar pagamento'
       };
     }
 
+    console.log('Fixed QR Code generated successfully:', data.paymentId);
+
     return {
       success: true,
-      message: 'QR Code gerado com sucesso',
+      message: data.message || 'QR Code fixo gerado com sucesso',
       paymentId: data.paymentId,
       qrCode: data.qrCode,
       qrCodeBase64: data.qrCodeBase64,
       amount: data.amount
     };
+
   } catch (error) {
+    console.error('Error generating QR code:', error);
     return {
       success: false,
-      message: 'Erro ao gerar QR Code',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
+      message: error instanceof Error ? error.message : 'Erro desconhecido ao gerar QR Code'
     };
   }
 };

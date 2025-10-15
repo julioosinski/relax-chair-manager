@@ -3,210 +3,281 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-signature, x-request-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const MAX_NOTIFICATION_ATTEMPTS = 3;
+const AMOUNT_TOLERANCE = 0.01;
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
     return new Response(
-      JSON.stringify({ error: 'Método não permitido' }),
+      JSON.stringify({ error: 'Method not allowed' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
     );
   }
 
   try {
     const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-    
-    if (!accessToken) {
-      console.error('MERCADOPAGO_ACCESS_TOKEN not configured');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!accessToken || !supabaseUrl || !supabaseKey) {
+      console.error('Missing environment variables');
       return new Response(
-        JSON.stringify({ error: 'Token não configurado' }),
+        JSON.stringify({ error: 'Server configuration incomplete' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    // Validar assinatura do webhook (x-signature)
-    const signature = req.headers.get('x-signature');
-    const requestId = req.headers.get('x-request-id');
-    
-    if (!signature) {
-      console.warn('Webhook received without signature');
-      // Em produção, você pode querer rejeitar webhooks sem assinatura
-    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const webhookData = await req.json();
 
-    const body = await req.json();
-    const { type, data } = body;
+    console.log('Webhook received:', JSON.stringify(webhookData));
 
-    console.log(`Webhook received - Type: ${type}, Data:`, data);
-
-    // Processar apenas notificações de pagamento
-    if (type !== 'payment') {
-      console.log(`Ignoring webhook type: ${type}`);
+    if (webhookData.type !== 'payment') {
       return new Response(
-        JSON.stringify({ success: true, message: 'Tipo de webhook não processado' }),
+        JSON.stringify({ message: 'Not a payment notification' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    const paymentId = data?.id;
+    const paymentId = webhookData.data?.id;
     if (!paymentId) {
-      console.error('Payment ID not found in webhook data');
+      console.error('Payment ID not found in webhook');
       return new Response(
-        JSON.stringify({ error: 'ID do pagamento não encontrado' }),
+        JSON.stringify({ error: 'Payment ID missing' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
     // Buscar detalhes do pagamento no Mercado Pago
-    console.log(`Fetching payment details for ID: ${paymentId}`);
     const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Authorization': `Bearer ${accessToken}` }
     });
 
     if (!paymentResponse.ok) {
-      console.error(`Failed to fetch payment ${paymentId}: ${paymentResponse.status}`);
+      console.error('Failed to fetch payment from Mercado Pago');
       return new Response(
-        JSON.stringify({ error: 'Erro ao buscar dados do pagamento' }),
+        JSON.stringify({ error: 'Failed to fetch payment details' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
     const payment = await paymentResponse.json();
-    console.log(`Payment fetched - Status: ${payment.status}, Amount: ${payment.transaction_amount}`);
-
-    // Extrair informações relevantes
     const poltronaId = payment.metadata?.poltrona_id;
-    const status = payment.status; // approved, rejected, pending, etc.
-    const amount = payment.transaction_amount;
+    const paidAmount = parseFloat(payment.transaction_amount);
+    const paymentStatus = payment.status;
+
+    console.log(`Payment ${paymentId} - Status: ${paymentStatus}, Amount: ${paidAmount}, Poltrona: ${poltronaId}`);
 
     if (!poltronaId) {
       console.error('Poltrona ID not found in payment metadata');
       return new Response(
-        JSON.stringify({ error: 'ID da poltrona não encontrado nos metadados' }),
+        JSON.stringify({ error: 'Poltrona ID missing' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Criar cliente Supabase com service role para bypass de RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Buscar configurações da poltrona
+    const { data: poltrona, error: poltronaError } = await supabase
+      .from('poltronas')
+      .select('price, active, ip, payment_id')
+      .eq('poltrona_id', poltronaId)
+      .single();
 
-    // Inserir ou atualizar pagamento no banco de dados
-    const { data: existingPayment, error: fetchError } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('payment_id', paymentId)
-      .maybeSingle();
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching existing payment:', fetchError);
-    }
-
-    if (existingPayment) {
-      // Atualizar pagamento existente
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          status: status,
-          approved_at: status === 'approved' ? new Date().toISOString() : existingPayment.approved_at
-        })
-        .eq('payment_id', paymentId);
-
-      if (updateError) {
-        console.error('Error updating payment:', updateError);
-      } else {
-        console.log(`Payment ${paymentId} updated successfully`);
-      }
-    } else {
-      // Criar novo pagamento
-      const { error: insertError } = await supabase
-        .from('payments')
-        .insert({
-          payment_id: paymentId,
-          poltrona_id: poltronaId,
-          amount: amount,
-          status: status,
-          approved_at: status === 'approved' ? new Date().toISOString() : null
-        });
-
-      if (insertError) {
-        console.error('Error inserting payment:', insertError);
-      } else {
-        console.log(`Payment ${paymentId} created successfully`);
-      }
-    }
-
-    // Registrar log
-    const { error: logError } = await supabase
-      .from('logs')
-      .insert({
+    if (poltronaError || !poltrona) {
+      console.error('Poltrona not found:', poltronaError);
+      await supabase.from('logs').insert({
         poltrona_id: poltronaId,
-        message: `Webhook processado - Payment ${paymentId}: ${status} - R$ ${amount}`
+        message: `ERRO: Poltrona não encontrada no webhook - Payment ${paymentId}`
+      });
+      return new Response(
+        JSON.stringify({ error: 'Poltrona not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    if (!poltrona.active) {
+      console.error('Poltrona is inactive');
+      await supabase.from('logs').insert({
+        poltrona_id: poltronaId,
+        message: `ERRO: Pagamento recebido mas poltrona está inativa - Payment ${paymentId}`
+      });
+      return new Response(
+        JSON.stringify({ error: 'Poltrona inactive' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // VALIDAÇÃO RIGOROSA DO VALOR
+    const expectedAmount = parseFloat(poltrona.price);
+    const amountDifference = Math.abs(paidAmount - expectedAmount);
+
+    if (amountDifference > AMOUNT_TOLERANCE) {
+      console.error(`VALOR INCORRETO! Esperado: R$ ${expectedAmount}, Pago: R$ ${paidAmount}`);
+      
+      await supabase.from('logs').insert({
+        poltrona_id: poltronaId,
+        message: `⚠️ PAGAMENTO REJEITADO - Valor incorreto! Esperado: R$ ${expectedAmount}, Recebido: R$ ${paidAmount} - Payment ${paymentId}`
       });
 
-    if (logError) {
-      console.error('Error inserting log:', logError);
+      await supabase.from('payments').insert({
+        payment_id: paymentId,
+        poltrona_id: poltronaId,
+        amount: paidAmount,
+        status: 'rejected',
+        processed: true
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Payment amount mismatch',
+          expected: expectedAmount,
+          received: paidAmount 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    // Se pagamento aprovado, notificar ESP32 (opcional)
-    if (status === 'approved') {
-      console.log(`Payment approved for poltrona ${poltronaId}`);
-      
-      // Buscar IP da poltrona
-      const { data: poltrona } = await supabase
-        .from('poltronas')
-        .select('ip')
-        .eq('poltrona_id', poltronaId)
-        .maybeSingle();
+    // Verificar se pagamento já foi processado
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('processed')
+      .eq('payment_id', paymentId)
+      .single();
 
-      if (poltrona?.ip) {
-        try {
-          await fetch(`http://${poltrona.ip}/api/payment-approved`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentId,
-              poltronaId,
-              amount,
-              timestamp: new Date().toISOString()
-            })
-          });
-          console.log(`ESP32 notified successfully for poltrona ${poltronaId}`);
-        } catch (espError) {
-          console.error(`Failed to notify ESP32 for poltrona ${poltronaId}:`, espError);
-        }
-      }
+    if (existingPayment?.processed) {
+      console.log('Payment already processed, skipping');
+      return new Response(
+        JSON.stringify({ message: 'Payment already processed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
+
+    // Processar pagamento aprovado
+    if (paymentStatus === 'approved') {
+      const paymentRecord = {
+        payment_id: paymentId,
+        poltrona_id: poltronaId,
+        amount: paidAmount,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        processed: false,
+        notification_attempts: 0
+      };
+
+      await supabase.from('payments').upsert(paymentRecord, {
+        onConflict: 'payment_id'
+      });
+
+      await supabase.from('logs').insert({
+        poltrona_id: poltronaId,
+        message: `✅ Pagamento aprovado: R$ ${paidAmount} - Payment ${paymentId}`
+      });
+
+      // Tentar notificar ESP32 com retry
+      await notifyESP32WithRetry(poltrona.ip, poltronaId, paymentId, supabase);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Payment approved and processed',
+          amount: paidAmount
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Registrar outros status
+    await supabase.from('payments').upsert({
+      payment_id: paymentId,
+      poltrona_id: poltronaId,
+      amount: paidAmount,
+      status: paymentStatus,
+      processed: true
+    }, { onConflict: 'payment_id' });
+
+    await supabase.from('logs').insert({
+      poltrona_id: poltronaId,
+      message: `Pagamento status: ${paymentStatus} - Payment ${paymentId}`
+    });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Webhook processado com sucesso',
-        paymentId,
-        status
-      }),
+      JSON.stringify({ message: `Payment status: ${paymentStatus}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
-    console.error('Error in webhook handler:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('Webhook error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Erro interno do servidor',
-        message: errorMessage
-      }),
+      JSON.stringify({ error: 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
+
+async function notifyESP32WithRetry(
+  ip: string, 
+  poltronaId: string, 
+  paymentId: string,
+  supabase: any
+) {
+  for (let attempt = 1; attempt <= MAX_NOTIFICATION_ATTEMPTS; attempt++) {
+    try {
+      console.log(`Notifying ESP32 at ${ip} (attempt ${attempt}/${MAX_NOTIFICATION_ATTEMPTS})`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`http://${ip}/payment-approved`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_id: paymentId }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        console.log(`ESP32 notified successfully on attempt ${attempt}`);
+        
+        await supabase.from('payments').update({
+          processed: true,
+          notified_at: new Date().toISOString(),
+          notification_attempts: attempt
+        }).eq('payment_id', paymentId);
+
+        await supabase.from('logs').insert({
+          poltrona_id: poltronaId,
+          message: `ESP32 notificado com sucesso (tentativa ${attempt})`
+        });
+
+        return true;
+      }
+    } catch (error) {
+      console.error(`ESP32 notification attempt ${attempt} failed:`, error);
+      
+      if (attempt === MAX_NOTIFICATION_ATTEMPTS) {
+        await supabase.from('logs').insert({
+          poltrona_id: poltronaId,
+          message: `⚠️ FALHA ao notificar ESP32 após ${MAX_NOTIFICATION_ATTEMPTS} tentativas`
+        });
+
+        await supabase.from('payments').update({
+          notification_attempts: attempt
+        }).eq('payment_id', paymentId);
+      }
+    }
+
+    if (attempt < MAX_NOTIFICATION_ATTEMPTS) {
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+    }
+  }
+
+  return false;
+}
