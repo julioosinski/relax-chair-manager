@@ -201,19 +201,32 @@ const QRCodeDisplay = ({
       <CardContent className="space-y-4">
         {qrCodeData ? (
           <>
-            <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
-              <p className="text-sm font-medium text-success mb-2">✓ QR Code Fixo Configurado</p>
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2">
+              <p className="text-sm font-medium text-primary mb-2">🔗 QR Code de Link Configurado</p>
               <p className="text-xs text-muted-foreground">
-                Este QR Code só aceita pagamentos de exatamente R$ {parseFloat(price.toString()).toFixed(2)}
+                <strong>IMPORTANTE:</strong> Este QR Code contém um LINK para a página de pagamento.
               </p>
+              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                <li>Escaneie com a câmera do celular (não com app do banco)</li>
+                <li>Abrirá uma página web com o QR Code PIX</li>
+                <li>Na página, escaneie o QR Code PIX com o app do banco</li>
+                <li>Valor fixo: R$ {parseFloat(price.toString()).toFixed(2)}</li>
+              </ul>
             </div>
 
             {qrCodeImage && (
               <div className="space-y-3">
-                <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-border">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-800 font-medium mb-1">⚠️ Para Impressão/Colagem na Poltrona</p>
+                  <p className="text-xs text-amber-700">
+                    Este QR Code deve ser escaneado com a câmera do celular, não com o app do banco.
+                  </p>
+                </div>
+                
+                <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-primary">
                   <img 
                     src={qrCodeImage} 
-                    alt="QR Code PIX" 
+                    alt="QR Code - Link para Pagamento" 
                     className="w-64 h-64"
                   />
                 </div>
@@ -243,13 +256,13 @@ const QRCodeDisplay = ({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Código PIX</span>
+                <span className="text-sm font-medium">Link da Página de Pagamento</span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowQR(!showQR)}
-                    title={showQR ? "Ocultar código" : "Mostrar código"}
+                    title={showQR ? "Ocultar link" : "Mostrar link"}
                   >
                     {showQR ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -257,17 +270,9 @@ const QRCodeDisplay = ({
                     variant="outline"
                     size="sm"
                     onClick={copyQRCode}
-                    title="Copiar código PIX"
+                    title="Copiar link"
                   >
                     <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={downloadQRCodeText}
-                    title="Baixar código como texto"
-                  >
-                    <Download className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -279,12 +284,16 @@ const QRCodeDisplay = ({
               )}
             </div>
 
-            {paymentId && (
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Payment ID: {paymentId}</div>
-                <div className="text-xs text-success">Valor Fixo: R$ {parseFloat(price.toString()).toFixed(2)}</div>
-              </div>
-            )}
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground font-medium mb-1">📱 Fluxo de Pagamento:</p>
+              <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                <li>Cliente escaneia este QR Code com câmera</li>
+                <li>Abre página web no navegador</li>
+                <li>Página gera QR Code PIX automático</li>
+                <li>Cliente paga com app do banco</li>
+                <li>Poltrona é liberada automaticamente</li>
+              </ol>
+            </div>
 
             <Button
               onClick={handleGenerateQR}
@@ -299,9 +308,15 @@ const QRCodeDisplay = ({
         ) : (
           <div className="space-y-3">
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Gere um QR Code fixo que só aceita o valor exato de R$ {parseFloat(price.toString()).toFixed(2)}
+              <p className="text-sm text-muted-foreground mb-2">
+                <strong>Solução Híbrida:</strong> QR Code fixo que abre página de pagamento dinâmica
               </p>
+              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                <li>Cliente escaneia QR fixo impresso na poltrona</li>
+                <li>Abre página web com QR PIX dinâmico</li>
+                <li>Pagamento notifica automaticamente via webhook</li>
+                <li>Valor: R$ {parseFloat(price.toString()).toFixed(2)}</li>
+              </ul>
             </div>
             <Button
               onClick={handleGenerateQR}
