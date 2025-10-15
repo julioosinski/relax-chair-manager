@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { RefreshCw, Shield, CalendarIcon } from "lucide-react";
+import { RefreshCw, Shield, CalendarIcon, FileText } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { User } from "@supabase/supabase-js";
 import { format } from "date-fns";
@@ -41,10 +41,10 @@ const Relatorios = () => {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !dateFrom && !dateTo) {
       fetchStats();
     }
-  }, [isAdmin, dateFrom, dateTo]);
+  }, [isAdmin]);
 
   const fetchStats = async () => {
     try {
@@ -178,12 +178,22 @@ const Relatorios = () => {
             </PopoverContent>
           </Popover>
 
+          <Button 
+            onClick={() => fetchStats()}
+            disabled={loading || (!dateFrom && !dateTo)}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Gerar Relatório
+          </Button>
+
           {(dateFrom || dateTo) && (
             <Button
               variant="ghost"
               onClick={() => {
                 setDateFrom(undefined);
                 setDateTo(undefined);
+                fetchStats();
               }}
             >
               Limpar Filtros

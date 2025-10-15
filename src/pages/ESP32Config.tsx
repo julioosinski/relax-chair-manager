@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wifi, WifiOff, Settings, TestTube, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, Settings, TestTube, RefreshCw, Download, Code } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -84,21 +84,54 @@ export default function ESP32Config() {
               Configure e monitore os dispositivos ESP32 das poltronas
             </p>
           </div>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <a href="/esp32_poltrona_v2.ino" download>
+                <Download className="mr-2 h-4 w-4" />
+                Download Código
+              </a>
+            </Button>
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
-        {/* Wizard de Configuração */}
+        {/* Download e Configuração do Código */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Code className="h-5 w-5" />
+              1. Baixe e Configure o Código
+            </CardTitle>
+            <CardDescription>Primeiro passo: preparar o ESP32</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <h4 className="font-medium mb-2">Instruções:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <li>Clique no botão "Download Código" acima para baixar o arquivo .ino</li>
+                  <li>Abra o arquivo no Arduino IDE</li>
+                  <li>Conecte seu ESP32 ao computador via USB</li>
+                  <li>Selecione a placa correta em Tools → Board → ESP32 Dev Module</li>
+                  <li>Faça o upload do código para o ESP32</li>
+                </ol>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Wizard de Configuração WiFi */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              Como Configurar um Novo ESP32
+              2. Configure o WiFi do ESP32
             </CardTitle>
             <CardDescription>
-              Siga os passos abaixo para configurar um dispositivo ESP32
+              Siga os passos abaixo para conectar o ESP32 à sua rede
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
