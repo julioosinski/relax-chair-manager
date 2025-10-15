@@ -70,19 +70,27 @@ serve(async (req) => {
       );
     }
 
-    // Se já existe QR Code fixo, retornar o existente
-    if (poltrona.qr_code && poltrona.payment_id) {
-      console.log(`Returning existing QR Code for poltrona ${poltronaId}`);
+    // Verificar se já existe URL de pagamento público (Solução Hybrid)
+    // URLs começam com http/https, códigos PIX começam com "00020126"
+    const isPublicUrl = poltrona.qr_code && (poltrona.qr_code.startsWith('http://') || poltrona.qr_code.startsWith('https://'));
+    
+    if (isPublicUrl && poltrona.payment_id) {
+      console.log(`Returning existing public payment URL for poltrona ${poltronaId}`);
       return new Response(
         JSON.stringify({
           success: true,
           paymentId: poltrona.payment_id,
           qrCode: poltrona.qr_code,
           amount: poltrona.price,
-          message: 'QR Code existente retornado'
+          message: 'URL de pagamento existente retornada'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
+    }
+    
+    // Se tem QR Code PIX antigo, vamos substituir pela URL pública
+    if (poltrona.qr_code && !isPublicUrl) {
+      console.log(`Converting old PIX QR Code to public URL for poltrona ${poltronaId}`);
     }
 
     // Gerar URL da página de pagamento pública
