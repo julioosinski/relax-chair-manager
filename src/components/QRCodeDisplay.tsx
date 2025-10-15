@@ -201,32 +201,22 @@ const QRCodeDisplay = ({
       <CardContent className="space-y-4">
         {qrCodeData ? (
           <>
-            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2">
-              <p className="text-sm font-medium text-primary mb-2">🔗 QR Code de Link Configurado</p>
+            <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+              <p className="text-sm font-medium text-success mb-2">✓ QR Code PIX Fixo Configurado</p>
               <p className="text-xs text-muted-foreground">
-                <strong>IMPORTANTE:</strong> Este QR Code contém um LINK para a página de pagamento.
+                Escaneie direto com o app do banco. Valor fixo: R$ {parseFloat(price.toString()).toFixed(2)}
               </p>
-              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
-                <li>Escaneie com a câmera do celular (não com app do banco)</li>
-                <li>Abrirá uma página web com o QR Code PIX</li>
-                <li>Na página, escaneie o QR Code PIX com o app do banco</li>
-                <li>Valor fixo: R$ {parseFloat(price.toString()).toFixed(2)}</li>
-              </ul>
+              <p className="text-xs text-amber-600 mt-2">
+                ⚠️ Sistema verifica pagamentos automaticamente a cada 30 segundos
+              </p>
             </div>
 
             {qrCodeImage && (
               <div className="space-y-3">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <p className="text-xs text-amber-800 font-medium mb-1">⚠️ Para Impressão/Colagem na Poltrona</p>
-                  <p className="text-xs text-amber-700">
-                    Este QR Code deve ser escaneado com a câmera do celular, não com o app do banco.
-                  </p>
-                </div>
-                
-                <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-primary">
+                <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-border">
                   <img 
                     src={qrCodeImage} 
-                    alt="QR Code - Link para Pagamento" 
+                    alt="QR Code PIX Direto" 
                     className="w-64 h-64"
                   />
                 </div>
@@ -256,13 +246,13 @@ const QRCodeDisplay = ({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Link da Página de Pagamento</span>
+                <span className="text-sm font-medium">Código PIX</span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowQR(!showQR)}
-                    title={showQR ? "Ocultar link" : "Mostrar link"}
+                    title={showQR ? "Ocultar código" : "Mostrar código"}
                   >
                     {showQR ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -270,9 +260,17 @@ const QRCodeDisplay = ({
                     variant="outline"
                     size="sm"
                     onClick={copyQRCode}
-                    title="Copiar link"
+                    title="Copiar código PIX"
                   >
                     <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadQRCodeText}
+                    title="Baixar código como texto"
+                  >
+                    <Download className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -284,15 +282,14 @@ const QRCodeDisplay = ({
               )}
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground font-medium mb-1">📱 Fluxo de Pagamento:</p>
-              <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
-                <li>Cliente escaneia este QR Code com câmera</li>
-                <li>Abre página web no navegador</li>
-                <li>Página gera QR Code PIX automático</li>
-                <li>Cliente paga com app do banco</li>
-                <li>Poltrona é liberada automaticamente</li>
-              </ol>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800 font-medium mb-1">🔄 Sistema de Polling Automático</p>
+              <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
+                <li>QR Code PIX fixo escaneável pelo app do banco</li>
+                <li>Sistema verifica pagamentos a cada 30 segundos</li>
+                <li>Quando aprovado, notifica ESP32 automaticamente</li>
+                <li>Funciona sem necessidade de webhook</li>
+              </ul>
             </div>
 
             <Button
@@ -308,15 +305,12 @@ const QRCodeDisplay = ({
         ) : (
           <div className="space-y-3">
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">
-                <strong>Solução Híbrida:</strong> QR Code fixo que abre página de pagamento dinâmica
+              <p className="text-sm text-muted-foreground">
+                Gere um QR Code PIX fixo que aceita o valor exato de R$ {parseFloat(price.toString()).toFixed(2)}
               </p>
-              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
-                <li>Cliente escaneia QR fixo impresso na poltrona</li>
-                <li>Abre página web com QR PIX dinâmico</li>
-                <li>Pagamento notifica automaticamente via webhook</li>
-                <li>Valor: R$ {parseFloat(price.toString()).toFixed(2)}</li>
-              </ul>
+              <p className="text-xs text-muted-foreground mt-2">
+                Sistema verifica pagamentos automaticamente e notifica ESP32
+              </p>
             </div>
             <Button
               onClick={handleGenerateQR}

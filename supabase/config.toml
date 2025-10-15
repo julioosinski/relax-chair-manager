@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.check-payment-status]
 verify_jwt = false
+
+[functions.check-payment-polling]
+verify_jwt = false
