@@ -4,40 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { 
   Settings, 
-  Wifi, 
   Database, 
   CreditCard, 
-  Smartphone, 
   Shield, 
   CheckCircle, 
   XCircle, 
   AlertCircle,
   Save,
   TestTube,
-  RefreshCw,
-  Copy,
-  ExternalLink
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { testMercadoPagoConnection, fallbackTestConnection } from "@/api/mercadopago";
+import { useUserRole } from "@/hooks/useUserRole";
+import { User } from "@supabase/supabase-js";
 
 interface SystemConfig {
-  // Supabase
-  supabaseUrl: string;
-  supabaseKey: string;
-  
-  // Mercado Pago
-  mercadopagoToken: string;
-  mercadopagoPublicKey: string;
-  webhookUrl: string;
-  
   // Sistema
   systemName: string;
   systemVersion: string;
@@ -62,12 +48,10 @@ interface TestResult {
 }
 
 const Configuracoes = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const { isAdmin, isLoading: roleLoading } = useUserRole(user);
+  
   const [config, setConfig] = useState<SystemConfig>({
-    supabaseUrl: "",
-    supabaseKey: "",
-    mercadopagoToken: "",
-    mercadopagoPublicKey: "",
-    webhookUrl: "https://relax-chair-manager.vercel.app/api/mercadopago-webhook",
     systemName: "Sistema de Poltronas",
     systemVersion: "1.0.0",
     maintenanceMode: false,
@@ -84,32 +68,17 @@ const Configuracoes = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
 
   useEffect(() => {
-    loadConfig();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
   }, []);
-
-  const loadConfig = async () => {
-    try {
-      // Carregar configurações do localStorage ou do Supabase
-      const savedConfig = localStorage.getItem('systemConfig');
-      if (savedConfig) {
-        setConfig(JSON.parse(savedConfig));
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-    }
-  };
 
   const saveConfig = async () => {
     setLoading(true);
     try {
-      // Salvar no localStorage
-      localStorage.setItem('systemConfig', JSON.stringify(config));
-      
-      // Aqui você pode salvar no Supabase também se necessário
       toast.success("✅ Configurações salvas com sucesso!");
     } catch (error) {
       toast.error("❌ Erro ao salvar configurações");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -121,22 +90,16 @@ const Configuracoes = () => {
     try {
       let result: TestResult;
       
-      switch (service) {
-        case 'supabase':
-          result = await testSupabaseConnection();
-          break;
-        case 'mercadopago':
-          result = await testMercadoPagoConnectionAPI();
-          break;
-        case 'webhook':
-          result = await testWebhookConnection();
-          break;
-        default:
-          result = {
-            service,
-            status: 'error',
-            message: 'Serviço não reconhecido'
-          };
+      if (service === 'supabase') {
+        result = await testSupabaseConnection();
+      } else if (service === 'mercadopago') {
+        result = await testMercadoPagoConnection();
+      } else {
+        result = {
+          service,
+          status: 'error',
+          message: 'Serviço não reconhecido'
+        };
       }
       
       setTestResults(prev => {
@@ -161,7 +124,7 @@ const Configuracoes = () => {
 
   const testSupabaseConnection = async (): Promise<TestResult> => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('poltronas')
         .select('count')
         .limit(1);
@@ -171,88 +134,39 @@ const Configuracoes = () => {
       return {
         service: 'supabase',
         status: 'success',
-        message: 'Conexão com Supabase estabelecida',
-        details: `URL: ${config.supabaseUrl}`
+        message: 'Conexão com banco de dados estabelecida',
+        details: 'Banco de dados operacional'
       };
     } catch (error: any) {
       return {
         service: 'supabase',
         status: 'error',
-        message: 'Falha na conexão com Supabase',
+        message: 'Falha na conexão com banco de dados',
         details: error.message
       };
     }
   };
 
-  const testMercadoPagoConnectionAPI = async (): Promise<TestResult> => {
+  const testMercadoPagoConnection = async (): Promise<TestResult> => {
     try {
-      // Usar a API proxy para evitar problemas de CORS
-      const result = await testMercadoPagoConnection({
-        accessToken: config.mercadopagoToken,
-        publicKey: config.mercadopagoPublicKey,
-        webhookUrl: config.webhookUrl
-      });
+      const { data, error } = await supabase.functions.invoke('mercadopago-test-connection');
+      
+      if (error) throw error;
       
       return {
         service: 'mercadopago',
-        status: result.success ? 'success' : 'error',
-        message: result.message,
-        details: result.details
+        status: data.success ? 'success' : 'error',
+        message: data.message,
+        details: data.details
       };
     } catch (error: any) {
-      // Fallback para teste local se a API não estiver disponível
-      const fallbackResult = await fallbackTestConnection({
-        accessToken: config.mercadopagoToken,
-        publicKey: config.mercadopagoPublicKey,
-        webhookUrl: config.webhookUrl
-      });
-      
       return {
         service: 'mercadopago',
-        status: fallbackResult.success ? 'warning' : 'error',
-        message: fallbackResult.message,
-        details: fallbackResult.details
-      };
-    }
-  };
-
-  const testWebhookConnection = async (): Promise<TestResult> => {
-    try {
-      const response = await fetch(config.webhookUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        return {
-          service: 'webhook',
-          status: 'success',
-          message: 'Webhook acessível',
-          details: `URL: ${config.webhookUrl}`
-        };
-      } else {
-        return {
-          service: 'webhook',
-          status: 'warning',
-          message: 'Webhook retornou status inesperado',
-          details: `Status: ${response.status} - ${response.statusText}`
-        };
-      }
-    } catch (error: any) {
-      return {
-        service: 'webhook',
         status: 'error',
-        message: 'Webhook não acessível',
+        message: 'Erro ao testar Mercado Pago',
         details: error.message
       };
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copiado para a área de transferência!");
   };
 
   const getStatusIcon = (status: string) => {
@@ -285,36 +199,47 @@ const Configuracoes = () => {
     );
   };
 
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <Shield className="h-16 w-16 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">Acesso Restrito</h1>
+        <p className="text-muted-foreground">
+          Apenas administradores podem acessar as configurações.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Configurações</h1>
           <p className="text-muted-foreground">
-            Configure todas as integrações e parâmetros do sistema
+            Configure parâmetros do sistema e teste conexões
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Recarregar
-          </Button>
-          <Button
-            onClick={saveConfig}
-            disabled={loading}
-            className="bg-gradient-primary"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {loading ? "Salvando..." : "Salvar Configurações"}
-          </Button>
-        </div>
+        <Button
+          onClick={saveConfig}
+          disabled={loading}
+          className="bg-gradient-primary"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {loading ? "Salvando..." : "Salvar Configurações"}
+        </Button>
       </div>
 
       <Tabs defaultValue="database" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="database" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Banco de Dados
@@ -327,10 +252,6 @@ const Configuracoes = () => {
             <Settings className="h-4 w-4" />
             Sistema
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Segurança
-          </TabsTrigger>
         </TabsList>
 
         {/* Banco de Dados */}
@@ -339,50 +260,10 @@ const Configuracoes = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                Configurações do Supabase
+                Status do Banco de Dados
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="supabaseUrl">URL do Supabase</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="supabaseUrl"
-                      value={config.supabaseUrl}
-                      onChange={(e) => setConfig({...config, supabaseUrl: e.target.value})}
-                      placeholder="https://seu-projeto.supabase.co"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(config.supabaseUrl)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supabaseKey">Chave Anônima</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="supabaseKey"
-                      type="password"
-                      value={config.supabaseKey}
-                      onChange={(e) => setConfig({...config, supabaseKey: e.target.value})}
-                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(config.supabaseKey)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(testResults.find(r => r.service === 'supabase')?.status || 'pending')}
@@ -423,70 +304,10 @@ const Configuracoes = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Configurações do Mercado Pago
+                Status do Mercado Pago
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mercadopagoToken">Access Token</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="mercadopagoToken"
-                      type="password"
-                      value={config.mercadopagoToken}
-                      onChange={(e) => setConfig({...config, mercadopagoToken: e.target.value})}
-                      placeholder="TEST-1234567890-abcdef..."
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(config.mercadopagoToken)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mercadopagoPublicKey">Chave Pública</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="mercadopagoPublicKey"
-                      value={config.mercadopagoPublicKey}
-                      onChange={(e) => setConfig({...config, mercadopagoPublicKey: e.target.value})}
-                      placeholder="TEST-12345678-1234-1234-1234-123456789012"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(config.mercadopagoPublicKey)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="webhookUrl">URL do Webhook</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="webhookUrl"
-                    value={config.webhookUrl}
-                    onChange={(e) => setConfig({...config, webhookUrl: e.target.value})}
-                    placeholder="https://seu-dominio.com/api/webhook/mercadopago"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(config.webhookUrl, '_blank')}
-                    disabled={!config.webhookUrl}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(testResults.find(r => r.service === 'mercadopago')?.status || 'pending')}
@@ -552,8 +373,6 @@ const Configuracoes = () => {
                 </div>
               </div>
               
-              <Separator />
-              
               <div className="space-y-4">
                 <h4 className="font-medium">Notificações</h4>
                 <div className="space-y-3">
@@ -600,8 +419,6 @@ const Configuracoes = () => {
                   </div>
                 </div>
               </div>
-              
-              <Separator />
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -654,8 +471,6 @@ const Configuracoes = () => {
                   />
                 </div>
               </div>
-              
-              <Separator />
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Activity, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Activity, Clock, RefreshCw, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
+import { User } from "@supabase/supabase-js";
 
 interface Stats {
   faturamentoHoje: number;
@@ -12,6 +14,9 @@ interface Stats {
 }
 
 const Dashboard = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const { isAdmin, isLoading: roleLoading } = useUserRole(user);
+  
   const [stats, setStats] = useState<Stats>({
     faturamentoHoje: 0,
     faturamento7Dias: 0,
@@ -22,16 +27,23 @@ const Dashboard = () => {
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchStats();
-    fetchRecentPayments();
-
-    // Poll for new payments every 10 seconds
-    const interval = setInterval(() => {
-      checkNewPayments();
-    }, 10000);
-
-    return () => clearInterval(interval);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchStats();
+      fetchRecentPayments();
+
+      const interval = setInterval(() => {
+        checkNewPayments();
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin]);
 
   const fetchStats = async () => {
     try {
@@ -40,7 +52,10 @@ const Dashboard = () => {
         .select("*")
         .eq("status", "approved");
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501') return;
+        throw error;
+      }
 
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -77,7 +92,10 @@ const Dashboard = () => {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501') return;
+        throw error;
+      }
       setRecentPayments(data || []);
     } catch (error: any) {
       console.error("Error fetching recent payments:", error);
@@ -140,6 +158,26 @@ const Dashboard = () => {
       gradient: "bg-gradient-card",
     },
   ];
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <Shield className="h-16 w-16 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">Acesso Restrito</h1>
+        <p className="text-muted-foreground">
+          Apenas administradores podem acessar o dashboard.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

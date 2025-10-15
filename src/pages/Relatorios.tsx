@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RefreshCw, Shield } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { User } from "@supabase/supabase-js";
 import {
   Table,
   TableBody,
@@ -18,12 +21,22 @@ interface PoltronaStats {
 }
 
 const Relatorios = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const { isAdmin, isLoading: roleLoading } = useUserRole(user);
   const [stats, setStats] = useState<PoltronaStats[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchStats();
+    }
+  }, [isAdmin]);
 
   const fetchStats = async () => {
     try {
@@ -32,7 +45,13 @@ const Relatorios = () => {
         .select("poltrona_id, amount")
         .eq("status", "approved");
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501') {
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       // Agrupar por poltrona
       const grouped = payments?.reduce((acc: Record<string, PoltronaStats>, p) => {
@@ -59,6 +78,26 @@ const Relatorios = () => {
 
   const totalGeral = stats.reduce((sum, s) => sum + s.total, 0);
   const totalAtivacoes = stats.reduce((sum, s) => sum + s.ativacoes, 0);
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <Shield className="h-16 w-16 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">Acesso Restrito</h1>
+        <p className="text-muted-foreground">
+          Apenas administradores podem acessar os relatórios.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { poltronaSchema, type PoltronaFormData } from "@/lib/validations";
 
 interface Poltrona {
   poltrona_id: string;
@@ -43,15 +44,17 @@ export function EditPoltronaDialog({
     setLoading(true);
 
     try {
+      const validatedData = poltronaSchema.parse(formData);
+      
       const { error } = await supabase
         .from("poltronas")
         .update({
-          ip: formData.ip,
-          pix_key: formData.pix_key,
-          price: formData.price,
-          duration: formData.duration,
-          location: formData.location,
-          active: formData.active,
+          ip: validatedData.ip,
+          pix_key: validatedData.pix_key,
+          price: validatedData.price,
+          duration: validatedData.duration,
+          location: validatedData.location,
+          active: validatedData.active,
         })
         .eq("poltrona_id", poltrona.poltrona_id);
 
@@ -61,8 +64,13 @@ export function EditPoltronaDialog({
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      toast.error("Erro ao atualizar poltrona");
-      console.error(error);
+      if (error.errors) {
+        error.errors.forEach((err: any) => {
+          toast.error(err.message);
+        });
+      } else {
+        toast.error("Erro ao atualizar poltrona");
+      }
     } finally {
       setLoading(false);
     }
