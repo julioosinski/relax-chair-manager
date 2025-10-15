@@ -26,10 +26,23 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    console.log('Environment check:', {
+      hasAccessToken: !!accessToken,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey
+    });
+
     if (!accessToken || !supabaseUrl || !supabaseKey) {
-      console.error('Missing environment variables');
+      console.error('Missing environment variables:', {
+        accessToken: !!accessToken,
+        supabaseUrl: !!supabaseUrl,
+        supabaseKey: !!supabaseKey
+      });
       return new Response(
-        JSON.stringify({ error: 'Server configuration incomplete' }),
+        JSON.stringify({ 
+          error: 'Server configuration incomplete',
+          details: 'Missing required environment variables'
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
