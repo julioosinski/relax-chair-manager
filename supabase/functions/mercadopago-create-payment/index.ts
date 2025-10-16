@@ -6,17 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Função para detectar o tipo da chave PIX
-function getPixKeyType(pixKey: string): string {
-  const cleanKey = pixKey.replace(/\D/g, '');
-  
-  if (pixKey.includes('@')) return 'EMAIL';
-  if (cleanKey.length === 11) return 'CPF';
-  if (cleanKey.length === 14) return 'CNPJ';
-  if (pixKey.startsWith('+')) return 'PHONE';
-  return 'EVP'; // Chave aleatória (UUID)
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,18 +70,6 @@ serve(async (req) => {
       );
     }
 
-    // Validar se a chave PIX está configurada
-    if (!poltrona.pix_key || poltrona.pix_key.trim() === '') {
-      console.error("PIX key not configured for poltrona:", poltronaId);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Chave PIX não configurada para esta poltrona",
-          details: "Configure uma chave PIX válida nas configurações da poltrona"
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
-      );
-    }
 
     // Se já existe QR Code fixo válido (código PIX, não URL)
     const isPixCode = poltrona.qr_code && poltrona.qr_code.startsWith("00020126");
@@ -116,36 +93,25 @@ serve(async (req) => {
       console.log(`Replacing old URL with PIX QR Code for poltrona ${poltronaId}`);
     }
 
-    // Detectar tipo da chave PIX
-    const pixKeyType = getPixKeyType(poltrona.pix_key);
-    
-    console.log(`PIX Key: ${poltrona.pix_key}, Type: ${pixKeyType}`);
-
     // Criar pagamento PIX fixo no Mercado Pago
     const paymentData = {
       transaction_amount: parseFloat(poltrona.price),
       description: `Massagem Poltrona ${poltronaId} - R$ ${poltrona.price}`,
       payment_method_id: "pix",
       payer: {
-        email: "cliente@massagem.com",
-        identification: {
-          type: pixKeyType,
-          number: poltrona.pix_key
-        }
+        email: "cliente@massagem.com"
       },
       metadata: {
         poltrona_id: poltronaId,
         amount: poltrona.price,
         esp32_ip: poltrona.ip,
-        pix_key: poltrona.pix_key,
-        pix_key_type: pixKeyType
+        pix_key_referencia: poltrona.pix_key
       },
     };
 
-    console.log("Creating fixed PIX payment with key:", {
-      pix_key: poltrona.pix_key,
-      type: pixKeyType,
-      amount: poltrona.price
+    console.log("Creating fixed PIX payment:", {
+      amount: poltrona.price,
+      poltrona_id: poltronaId
     });
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -172,15 +138,10 @@ serve(async (req) => {
         userMessage = "Use um token de TESTE do Mercado Pago";
       }
 
-      // Erros específicos de chave PIX
-      if (data.message?.includes("pix_key") || data.cause?.[0]?.code === "invalid_pix_key") {
-        errorMessage = "Chave PIX inválida";
-        userMessage = `A chave PIX '${poltrona.pix_key}' não é válida ou não está cadastrada no Mercado Pago`;
-      }
-
+      // Erro específico de PSP
       if (data.message?.includes("PSP") || data.message?.includes("receiver")) {
         errorMessage = "Recebedor rejeitado pelo PSP";
-        userMessage = `Verifique se a chave PIX '${poltrona.pix_key}' está ativa e autorizada a receber pagamentos no Mercado Pago`;
+        userMessage = "Verifique se a chave PIX da conta Mercado Pago está configurada e autorizada a receber pagamentos";
       }
 
       return new Response(
@@ -188,9 +149,7 @@ serve(async (req) => {
           success: false,
           message: errorMessage,
           details: userMessage,
-          statusCode: response.status,
-          pixKey: poltrona.pix_key,
-          pixKeyType: pixKeyType
+          statusCode: response.status
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
@@ -232,10 +191,10 @@ serve(async (req) => {
       status: "pending",
     });
 
-    // Registrar log com informações da chave PIX
+    // Registrar log
     await supabase.from("logs").insert({
       poltrona_id: poltronaId,
-      message: `QR Code PIX fixo gerado: Payment ID ${data.id}, Valor: R$ ${poltrona.price}, Chave: ${poltrona.pix_key} (${pixKeyType})`,
+      message: `QR Code PIX fixo gerado: Payment ID ${data.id}, Valor: R$ ${poltrona.price}`,
     });
 
     console.log(`Fixed PIX QR Code created for poltrona ${poltronaId}`);
