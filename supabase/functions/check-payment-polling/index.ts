@@ -85,7 +85,7 @@ serve(async (req) => {
   }
 
   try {
-    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    const accessToken = Deno.env.get('TOKEN_DE_ACESSO_DO_MERCADOPAGO');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     

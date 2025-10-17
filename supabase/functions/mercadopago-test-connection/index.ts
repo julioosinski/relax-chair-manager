@@ -12,14 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    const accessToken = Deno.env.get('TOKEN_DE_ACESSO_DO_MERCADOPAGO');
     
     if (!accessToken) {
       return new Response(
         JSON.stringify({ 
           success: false, 
           message: 'Token do Mercado Pago não configurado no servidor',
-          details: 'Configure MERCADOPAGO_ACCESS_TOKEN nos secrets' 
+          details: 'Configure TOKEN_DE_ACESSO_DO_MERCADOPAGO nos secrets' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
