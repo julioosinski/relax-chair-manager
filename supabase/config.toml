@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.test-esp32-relay]
 verify_jwt = true
+
+[functions.cleanup-expired-sessions]
+verify_jwt = false

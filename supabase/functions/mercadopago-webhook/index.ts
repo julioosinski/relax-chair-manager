@@ -214,10 +214,10 @@ serve(async (req) => {
       );
     }
 
-    // Buscar configurações da poltrona
+    // Buscar configurações da poltrona (incluindo duração para sessão)
     const { data: poltrona, error: poltronaError } = await supabase
       .from('poltronas')
-      .select('price, active, ip, payment_id')
+      .select('price, active, ip, payment_id, duration')
       .eq('poltrona_id', poltronaId)
       .single();
 
@@ -292,12 +292,15 @@ serve(async (req) => {
 
     // Processar pagamento aprovado
     if (paymentStatus === 'approved') {
+      const now = new Date();
+      const sessionEndsAt = new Date(now.getTime() + (poltrona.duration * 1000));
+
       const paymentRecord = {
         payment_id: paymentId,
         poltrona_id: poltronaId,
         amount: paidAmount,
         status: 'approved',
-        approved_at: new Date().toISOString(),
+        approved_at: now.toISOString(),
         processed: false,
         notification_attempts: 0
       };
@@ -306,19 +309,31 @@ serve(async (req) => {
         onConflict: 'payment_id'
       });
 
+      // ATIVAR SESSÃO NA POLTRONA
+      await supabase
+        .from('poltronas')
+        .update({
+          session_active: true,
+          session_started_at: now.toISOString(),
+          session_ends_at: sessionEndsAt.toISOString(),
+          current_payment_id: paymentId.toString()
+        })
+        .eq('poltrona_id', poltronaId);
+
       await supabase.from('logs').insert({
         poltrona_id: poltronaId,
-        message: `✅ Pagamento aprovado: R$ ${paidAmount} - Payment ${paymentId}`
+        message: `✅ Pagamento aprovado: R$ ${paidAmount} - Sessão iniciada até ${sessionEndsAt.toLocaleTimeString('pt-BR')} - Payment ${paymentId}`
       });
 
-      // Tentar notificar ESP32 com retry
-      await notifyESP32WithRetry(poltrona.ip, poltronaId, paymentId, supabase);
+      // Tentar notificar ESP32 com retry e duração
+      await notifyESP32WithRetry(poltrona.ip, poltronaId, paymentId, poltrona.duration, supabase);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'Payment approved and processed',
-          amount: paidAmount
+          amount: paidAmount,
+          session_ends_at: sessionEndsAt.toISOString()
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -356,6 +371,7 @@ async function notifyESP32WithRetry(
   ip: string, 
   poltronaId: string, 
   paymentId: string,
+  duration: number,
   supabase: any
 ) {
   for (let attempt = 1; attempt <= MAX_NOTIFICATION_ATTEMPTS; attempt++) {
@@ -368,7 +384,10 @@ async function notifyESP32WithRetry(
       const response = await fetch(`http://${ip}/payment-approved`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_id: paymentId }),
+        body: JSON.stringify({ 
+          payment_id: paymentId,
+          duration: duration
+        }),
         signal: controller.signal
       });
 

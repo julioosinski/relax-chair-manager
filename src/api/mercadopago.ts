@@ -21,6 +21,8 @@ interface PaymentResult {
   qrCodeBase64?: string;
   amount?: number;
   details?: string;
+  time_remaining_seconds?: number;
+  session_ends_at?: string;
 }
 
 /**
@@ -85,7 +87,9 @@ export const generateCompleteQRCode = async (
       return {
         success: false,
         message: data.message || 'Erro ao criar pagamento',
-        details: data.details || data.message
+        details: data.details || data.message,
+        time_remaining_seconds: data.time_remaining_seconds,
+        session_ends_at: data.session_ends_at
       };
     }
 

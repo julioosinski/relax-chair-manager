@@ -42,10 +42,10 @@ serve(async (req) => {
 
     console.log(`Creating fixed QR Code for poltrona ${poltronaId}`);
 
-    // Buscar configurações da poltrona no banco
+    // Buscar configurações da poltrona no banco (incluindo campos de sessão)
     const { data: poltrona, error: poltronaError } = await supabase
       .from("poltronas")
-      .select("price, pix_key, active, qr_code, payment_id, ip")
+      .select("price, pix_key, active, qr_code, payment_id, ip, duration, session_active, session_ends_at")
       .eq("poltrona_id", poltronaId)
       .single();
 
@@ -68,6 +68,43 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
+    }
+
+    // VERIFICAR SE HÁ SESSÃO ATIVA (POLTRONA EM USO)
+    if (poltrona.session_active && poltrona.session_ends_at) {
+      const now = new Date();
+      const sessionEnds = new Date(poltrona.session_ends_at);
+      
+      if (sessionEnds > now) {
+        // Sessão ainda ativa - calcular tempo restante
+        const timeRemainingSeconds = Math.ceil((sessionEnds.getTime() - now.getTime()) / 1000);
+        const minutesRemaining = Math.ceil(timeRemainingSeconds / 60);
+        
+        console.log(`Poltrona ${poltronaId} em uso. Tempo restante: ${minutesRemaining} minutos`);
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Poltrona em uso",
+            details: `Esta poltrona está sendo usada. Aguarde ${minutesRemaining} minuto${minutesRemaining > 1 ? 's' : ''}`,
+            time_remaining_seconds: timeRemainingSeconds,
+            session_ends_at: poltrona.session_ends_at,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 423 },
+        );
+      } else {
+        // Sessão expirou mas não foi limpa automaticamente - limpar agora
+        console.log(`Limpando sessão expirada da poltrona ${poltronaId}`);
+        await supabase
+          .from("poltronas")
+          .update({
+            session_active: false,
+            session_started_at: null,
+            session_ends_at: null,
+            current_payment_id: null,
+          })
+          .eq("poltrona_id", poltronaId);
+      }
     }
 
 

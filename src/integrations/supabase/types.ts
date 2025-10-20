@@ -252,6 +252,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          current_payment_id: string | null
           duration: number
           id: string
           ip: string
@@ -262,11 +263,15 @@ export type Database = {
           price: number
           qr_code: string | null
           qr_code_generated_at: string | null
+          session_active: boolean | null
+          session_ends_at: string | null
+          session_started_at: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           created_at?: string
+          current_payment_id?: string | null
           duration?: number
           id?: string
           ip: string
@@ -277,11 +282,15 @@ export type Database = {
           price?: number
           qr_code?: string | null
           qr_code_generated_at?: string | null
+          session_active?: boolean | null
+          session_ends_at?: string | null
+          session_started_at?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           created_at?: string
+          current_payment_id?: string | null
           duration?: number
           id?: string
           ip?: string
@@ -292,6 +301,9 @@ export type Database = {
           price?: number
           qr_code?: string | null
           qr_code_generated_at?: string | null
+          session_active?: boolean | null
+          session_ends_at?: string | null
+          session_started_at?: string | null
           updated_at?: string
         }
         Relationships: []
