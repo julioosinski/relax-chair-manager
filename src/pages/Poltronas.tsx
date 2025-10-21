@@ -21,7 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { poltronaSchema, type PoltronaFormData } from "@/lib/validations";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePaymentPolling } from "@/hooks/usePaymentPolling";
-import { useSessionTimer, formatTimeRemaining } from "@/hooks/useSessionTimer";
+import { PoltronaCard } from "@/components/PoltronaCard";
 import { z } from "zod";
 import { User } from "@supabase/supabase-js";
 
@@ -376,111 +376,27 @@ const Poltronas = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {poltronas.map((poltrona) => {
-          const timeRemaining = useSessionTimer(poltrona.session_ends_at || null);
-          const isInUse = poltrona.session_active && timeRemaining > 0;
-          
-          return (
-            <div key={poltrona.poltrona_id} className="space-y-4">
-              {/* Card Principal da Poltrona */}
-              <Card className="border-border bg-card hover:border-primary transition-colors">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Poltrona {poltrona.poltrona_id}</span>
-                    <div className="flex gap-2">
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          poltrona.active
-                            ? "bg-accent/20 text-accent"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {poltrona.active ? "Ativa" : "Inativa"}
-                      </span>
-                      {isInUse && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-500 font-medium">
-                          Em Uso
-                        </span>
-                      )}
-                      {!isInUse && poltrona.active && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-500 font-medium">
-                          Disponível
-                        </span>
-                      )}
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IP:</span>
-                      <span className="font-mono">{poltrona.ip}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valor:</span>
-                      <span className="font-bold text-accent">
-                        R$ {poltrona.price.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duração:</span>
-                      <span>{poltrona.duration}s</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Local:</span>
-                      <span className="text-right">{poltrona.location}</span>
-                    </div>
-                    {isInUse && (
-                      <div className="pt-2 border-t border-border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Liberação em:</span>
-                          <span className="font-mono text-lg font-bold text-red-500">
-                            {formatTimeRemaining(timeRemaining)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleTestStart(poltrona.poltrona_id)}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Teste
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setEditingPoltrona(poltrona)}
-                    disabled={!isAdmin}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <FileText className="h-3 w-3 mr-1" />
-                    Ficha
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        {poltronas.map((poltrona) => (
+          <div key={poltrona.poltrona_id} className="space-y-4">
+            {/* Card Principal da Poltrona */}
+            <PoltronaCard
+              poltrona={poltrona}
+              isAdmin={isAdmin}
+              onTestStart={handleTestStart}
+              onEdit={setEditingPoltrona}
+            />
 
-                {/* Card do QR Code */}
-                <QRCodeDisplay
-                  poltronaId={poltrona.poltrona_id}
-                  qrCodeData={poltrona.qr_code_data}
-                  paymentId={poltrona.payment_id}
-                  price={poltrona.price}
-                  onGenerateQR={() => handleGenerateQR(poltrona.poltrona_id)}
-                  loading={isGeneratingQR[poltrona.poltrona_id] || isInUse || false}
-                />
-              </div>
-            );
-          })}
+            {/* Card do QR Code */}
+            <QRCodeDisplay
+              poltronaId={poltrona.poltrona_id}
+              qrCodeData={poltrona.qr_code_data}
+              paymentId={poltrona.payment_id}
+              price={poltrona.price}
+              onGenerateQR={() => handleGenerateQR(poltrona.poltrona_id)}
+              loading={isGeneratingQR[poltrona.poltrona_id] || poltrona.session_active || false}
+            />
+          </div>
+        ))}
       </div>
 
       {poltronas.length === 0 && (
