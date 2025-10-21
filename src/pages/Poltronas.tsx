@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Play, Edit, FileText, ShieldAlert } from "lucide-react";
+import { Plus, Play, Edit, FileText, ShieldAlert, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,6 +24,7 @@ import { usePaymentPolling } from "@/hooks/usePaymentPolling";
 import { PoltronaCard } from "@/components/PoltronaCard";
 import { z } from "zod";
 import { User } from "@supabase/supabase-js";
+import QRCode from "qrcode";
 
 interface Poltrona {
   poltrona_id: string;
@@ -39,6 +40,7 @@ interface Poltrona {
   session_active?: boolean;
   session_ends_at?: string;
   current_payment_id?: string;
+  public_payment_url?: string;
 }
 
 const Poltronas = () => {
@@ -165,6 +167,66 @@ const Poltronas = () => {
   };
 
   const [isGeneratingQR, setIsGeneratingQR] = useState<Record<string, boolean>>({});
+
+  const handleGeneratePrintableQR = async (poltrona: Poltrona) => {
+    try {
+      setIsGeneratingQR(prev => ({ ...prev, [poltrona.poltrona_id]: true }));
+      
+      const currentUrl = window.location.origin;
+      const publicUrl = `${currentUrl}/pay/${poltrona.poltrona_id}`;
+      
+      // Salvar URL no banco
+      const { error: updateError } = await supabase
+        .from('poltronas')
+        .update({ public_payment_url: publicUrl })
+        .eq('poltrona_id', poltrona.poltrona_id);
+
+      if (updateError) {
+        console.error('Error updating public_payment_url:', updateError);
+        toast.error('Erro ao salvar URL no banco');
+        return;
+      }
+
+      // Gerar QR Code da URL em alta resolução
+      const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
+        width: 800,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      // Criar link para download
+      const link = document.createElement('a');
+      link.download = `qrcode-poltrona-${poltrona.poltrona_id}.png`;
+      link.href = qrCodeDataUrl;
+      link.click();
+      
+      // Atualizar estado local
+      setPoltronas(prevPoltronas =>
+        prevPoltronas.map(p =>
+          p.poltrona_id === poltrona.poltrona_id
+            ? { ...p, public_payment_url: publicUrl }
+            : p
+        )
+      );
+      
+      toast.success('QR Code para impressão gerado e baixado!');
+      
+      await logAction({
+        action: 'GENERATE_PRINTABLE_QR',
+        entity_type: 'poltrona',
+        entity_id: poltrona.poltrona_id,
+        new_values: { public_payment_url: publicUrl }
+      });
+    } catch (error) {
+      console.error('Error generating printable QR:', error);
+      toast.error('Erro ao gerar QR Code para impressão');
+    } finally {
+      setIsGeneratingQR(prev => ({ ...prev, [poltrona.poltrona_id]: false }));
+    }
+  };
 
   const handleGenerateQR = async (poltronaId: string) => {
     try {
@@ -384,6 +446,8 @@ const Poltronas = () => {
               isAdmin={isAdmin}
               onTestStart={handleTestStart}
               onEdit={setEditingPoltrona}
+              onGeneratePrintableQR={() => handleGeneratePrintableQR(poltrona)}
+              isGeneratingPrintable={isGeneratingQR[poltrona.poltrona_id] || false}
             />
 
             {/* Card do QR Code */}

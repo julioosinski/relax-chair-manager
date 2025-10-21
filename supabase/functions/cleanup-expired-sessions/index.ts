@@ -60,6 +60,7 @@ serve(async (req) => {
     for (const session of expiredSessions) {
       try {
         // Desativar sessão e limpar campos temporários
+        // NÃO limpar public_payment_url - é o QR Code fixo para impressão
         const { error: updateError } = await supabase
           .from("poltronas")
           .update({

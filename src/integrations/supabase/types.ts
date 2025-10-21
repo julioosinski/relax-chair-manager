@@ -261,6 +261,7 @@ export type Database = {
           pix_key: string
           poltrona_id: string
           price: number
+          public_payment_url: string | null
           qr_code: string | null
           qr_code_generated_at: string | null
           session_active: boolean | null
@@ -280,6 +281,7 @@ export type Database = {
           pix_key: string
           poltrona_id: string
           price?: number
+          public_payment_url?: string | null
           qr_code?: string | null
           qr_code_generated_at?: string | null
           session_active?: boolean | null
@@ -299,6 +301,7 @@ export type Database = {
           pix_key?: string
           poltrona_id?: string
           price?: number
+          public_payment_url?: string | null
           qr_code?: string | null
           qr_code_generated_at?: string | null
           session_active?: boolean | null

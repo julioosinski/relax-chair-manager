@@ -31,6 +31,8 @@ const PublicPayment = () => {
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [pixTimeRemaining, setPixTimeRemaining] = useState<number | null>(null);
+  const [poltronaInUse, setPoltronaInUse] = useState<{ timeRemaining: number; sessionEnds: string } | null>(null);
 
   useEffect(() => {
     if (poltronaId) {
@@ -42,6 +44,27 @@ const PublicPayment = () => {
     if (payment?.qrCode) {
       generateQRCodeImage(payment.qrCode);
       startPaymentPolling(payment.paymentId);
+    }
+  }, [payment]);
+
+  // Timer de expiração do PIX
+  useEffect(() => {
+    if (payment?.expiresAt) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const expires = new Date(payment.expiresAt!).getTime();
+        const remaining = Math.floor((expires - now) / 1000);
+        
+        if (remaining <= 0) {
+          clearInterval(interval);
+          setPixTimeRemaining(0);
+          toast.error('QR Code PIX expirado. Recarregue a página para gerar um novo.');
+        } else {
+          setPixTimeRemaining(remaining);
+        }
+      }, 1000);
+      
+      return () => clearInterval(interval);
     }
   }, [payment]);
 
@@ -72,25 +95,43 @@ const PublicPayment = () => {
 
   const generateDynamicQRCode = async (poltronaId: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.functions.invoke('mercadopago-create-dynamic-payment', {
         body: { poltronaId }
       });
 
       if (error) throw error;
 
-      if (data.success) {
-        setPayment({
-          paymentId: data.paymentId,
-          qrCode: data.qrCode,
-          amount: data.amount,
-          expiresAt: data.expirationDate
-        });
-      } else {
-        toast.error(data.message || "Erro ao gerar QR Code");
+      if (!data.success) {
+        // Tratamento especial para poltrona em uso (status 423)
+        if (data.time_remaining_seconds) {
+          const minutes = Math.ceil(data.time_remaining_seconds / 60);
+          setPoltronaInUse({
+            timeRemaining: data.time_remaining_seconds,
+            sessionEnds: data.session_ends_at
+          });
+          toast.error(
+            `Poltrona em uso. Disponível em ${minutes} minuto${minutes > 1 ? 's' : ''}`,
+            { duration: 5000 }
+          );
+        } else {
+          toast.error(data.message || "Erro ao gerar QR Code");
+        }
+        return;
       }
+
+      setPayment({
+        paymentId: data.paymentId,
+        qrCode: data.qrCode,
+        amount: data.amount,
+        expiresAt: data.expirationDate
+      });
+      setPoltronaInUse(null);
     } catch (error) {
       console.error('Error generating dynamic QR:', error);
       toast.error("Erro ao gerar QR Code de pagamento");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,6 +279,23 @@ const PublicPayment = () => {
                 </div>
               </div>
 
+              {poltronaInUse && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-center">
+                  <p className="text-red-500 font-semibold mb-2">⏳ Poltrona em Uso</p>
+                  <p className="text-sm text-muted-foreground">
+                    Disponível em aproximadamente {Math.ceil(poltronaInUse.timeRemaining / 60)} minutos
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => window.location.reload()}
+                  >
+                    Tentar Novamente
+                  </Button>
+                </div>
+              )}
+
               {qrCodeImage && payment && (
                 <>
                   <div className="space-y-3">
@@ -265,6 +323,21 @@ const PublicPayment = () => {
                       <Copy className="mr-2 h-4 w-4" />
                       Copiar Código PIX
                     </Button>
+                    {pixTimeRemaining !== null && pixTimeRemaining > 0 && (
+                      <div className="text-center">
+                        <Badge variant="outline" className="text-xs">
+                          <Timer className="h-3 w-3 mr-1" />
+                          QR expira em: {Math.floor(pixTimeRemaining / 60)}:{String(pixTimeRemaining % 60).padStart(2, '0')}
+                        </Badge>
+                      </div>
+                    )}
+                    {pixTimeRemaining === 0 && (
+                      <div className="text-center">
+                        <Badge variant="destructive" className="text-xs">
+                          QR Code Expirado
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-muted/50 rounded-lg p-3 text-center">

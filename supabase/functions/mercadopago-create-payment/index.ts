@@ -112,17 +112,30 @@ serve(async (req) => {
     const isPixCode = poltrona.qr_code && poltrona.qr_code.startsWith("00020126");
 
     if (isPixCode && poltrona.payment_id) {
-      console.log(`Returning existing PIX QR Code for poltrona ${poltronaId}`);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          paymentId: poltrona.payment_id,
-          qrCode: poltrona.qr_code,
-          amount: poltrona.price,
-          message: "QR Code PIX existente retornado",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-      );
+      // Verificar se o pagamento já foi aprovado no banco
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("status")
+        .eq("payment_id", poltrona.payment_id)
+        .single();
+
+      if (existingPayment?.status === "approved") {
+        console.log(`Payment ${poltrona.payment_id} already approved, generating new QR Code`);
+        // Pagamento já foi usado - continuar para criar novo
+      } else {
+        // Pagamento ainda pendente - pode reutilizar
+        console.log(`Returning existing PIX QR Code for poltrona ${poltronaId}`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            paymentId: poltrona.payment_id,
+            qrCode: poltrona.qr_code,
+            amount: poltrona.price,
+            message: "QR Code PIX existente retornado",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
     }
 
     // Se tem URL antiga, vamos substituir por QR PIX
