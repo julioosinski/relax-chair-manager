@@ -155,22 +155,27 @@ const PublicPayment = () => {
     const interval = setInterval(async () => {
       setCheckingPayment(true);
       try {
-        const { data, error } = await supabase
-          .from('payments')
-          .select('status')
-          .eq('payment_id', parseInt(paymentId.toString()))
-          .single();
-
-        if (!error && data) {
-          if (data.status === 'approved') {
-            setPaymentStatus('approved');
-            clearInterval(interval);
-            toast.success("🎉 Pagamento aprovado! A poltrona será liberada em instantes.");
-          } else if (data.status === 'rejected') {
-            setPaymentStatus('rejected');
-            clearInterval(interval);
-            toast.error("Pagamento rejeitado. Por favor, tente novamente.");
+        // Use a edge function pública para verificar o status
+        const { data, error } = await supabase.functions.invoke(
+          'check-payment-status-public',
+          {
+            body: { paymentId: parseInt(paymentId.toString()) },
           }
+        );
+
+        if (error) {
+          console.error('Erro ao verificar pagamento:', error);
+          return;
+        }
+
+        if (data?.status === 'approved') {
+          setPaymentStatus('approved');
+          clearInterval(interval);
+          toast.success("🎉 Pagamento aprovado! A poltrona será liberada em instantes.");
+        } else if (data?.status === 'rejected') {
+          setPaymentStatus('rejected');
+          clearInterval(interval);
+          toast.error("Pagamento rejeitado. Por favor, tente novamente.");
         }
       } catch (error) {
         console.error('Error checking payment:', error);
