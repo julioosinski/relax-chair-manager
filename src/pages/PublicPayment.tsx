@@ -4,9 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, QrCode, CheckCircle, Copy, Timer } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import QRCode from "qrcode";
+
+// Cliente Supabase público (sem autenticação)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  }
+});
 
 interface PoltronaInfo {
   poltrona_id: string;
@@ -35,8 +45,12 @@ const PublicPayment = () => {
   const [poltronaInUse, setPoltronaInUse] = useState<{ timeRemaining: number; sessionEnds: string } | null>(null);
 
   useEffect(() => {
+    console.log('🚀 PublicPayment mounted, poltronaId:', poltronaId);
     if (poltronaId) {
       loadPoltronaInfo();
+    } else {
+      console.error('❌ No poltronaId provided');
+      setLoading(false);
     }
   }, [poltronaId]);
 
@@ -70,39 +84,65 @@ const PublicPayment = () => {
 
   const loadPoltronaInfo = async () => {
     try {
+      console.log('🔍 Loading poltrona info for:', poltronaId);
+      
       const { data, error } = await supabase
         .from('poltronas')
         .select('poltrona_id, price, location, duration, active')
         .eq('poltrona_id', poltronaId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error loading poltrona:', error);
+        throw error;
+      }
+
+      console.log('✅ Poltrona loaded:', data);
+
+      if (!data) {
+        console.error('❌ Poltrona not found');
+        toast.error("Poltrona não encontrada");
+        setLoading(false);
+        return;
+      }
 
       if (!data.active) {
+        console.warn('⚠️ Poltrona is inactive');
         toast.error("Esta poltrona está desativada");
+        setPoltrona(data);
+        setLoading(false);
         return;
       }
 
       setPoltrona(data);
+      console.log('🎯 Generating dynamic QR code...');
       await generateDynamicQRCode(data.poltrona_id);
     } catch (error) {
-      console.error('Error loading poltrona:', error);
+      console.error('❌ Error loading poltrona:', error);
       toast.error("Erro ao carregar informações da poltrona");
-    } finally {
       setLoading(false);
     }
   };
 
   const generateDynamicQRCode = async (poltronaId: string) => {
     try {
+      console.log('🔧 Calling mercadopago-create-dynamic-payment for:', poltronaId);
       setLoading(true);
+      
       const { data, error } = await supabase.functions.invoke('mercadopago-create-dynamic-payment', {
         body: { poltronaId }
       });
 
-      if (error) throw error;
+      console.log('📡 Edge function response:', { data, error });
+
+      if (error) {
+        console.error('❌ Edge function error:', error);
+        throw error;
+      }
 
       if (!data.success) {
+        console.warn('⚠️ Payment creation failed:', data);
+        
         // Tratamento especial para poltrona em uso (status 423)
         if (data.time_remaining_seconds) {
           const minutes = Math.ceil(data.time_remaining_seconds / 60);
@@ -117,9 +157,11 @@ const PublicPayment = () => {
         } else {
           toast.error(data.message || "Erro ao gerar QR Code");
         }
+        setLoading(false);
         return;
       }
 
+      console.log('✅ QR Code generated successfully');
       setPayment({
         paymentId: data.paymentId,
         qrCode: data.qrCode,
@@ -128,7 +170,7 @@ const PublicPayment = () => {
       });
       setPoltronaInUse(null);
     } catch (error) {
-      console.error('Error generating dynamic QR:', error);
+      console.error('❌ Error generating dynamic QR:', error);
       toast.error("Erro ao gerar QR Code de pagamento");
     } finally {
       setLoading(false);
