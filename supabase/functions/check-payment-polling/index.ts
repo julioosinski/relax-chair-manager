@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const MAX_NOTIFICATION_ATTEMPTS = 3;
-const NOTIFICATION_TIMEOUT = 5000;
+const NOTIFICATION_TIMEOUT = 10000; // Aumentado para 10 segundos
 
 async function notifyESP32WithRetry(
   esp32Ip: string, 
@@ -25,18 +25,24 @@ async function notifyESP32WithRetry(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), NOTIFICATION_TIMEOUT);
       
+      const payload = {
+        poltrona_id: poltronaId,
+        payment_id: paymentId,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`Sending notification to ESP32 at ${esp32Ip} with payload:`, payload);
+      
       const response = await fetch(`http://${esp32Ip}/payment-approved`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          poltrona_id: poltronaId,
-          payment_id: paymentId,
-          timestamp: new Date().toISOString()
-        }),
+        body: JSON.stringify(payload),
         signal: controller.signal
       });
       
       clearTimeout(timeoutId);
+      
+      console.log(`ESP32 response status: ${response.status} on attempt ${attempt}`);
       
       if (response.ok) {
         console.log(`Successfully notified ESP32 on attempt ${attempt}`);
@@ -58,6 +64,7 @@ async function notifyESP32WithRetry(
       
     } catch (error: any) {
       console.error(`Failed to notify ESP32 on attempt ${attempt}:`, error.message);
+      console.error(`Error details:`, error);
       
       if (attempt === MAX_NOTIFICATION_ATTEMPTS) {
         await supabase.from('payments').update({

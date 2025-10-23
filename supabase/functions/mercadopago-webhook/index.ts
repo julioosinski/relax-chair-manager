@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const MAX_NOTIFICATION_ATTEMPTS = 3;
+const NOTIFICATION_TIMEOUT = 10000; // 10 segundos
 const AMOUNT_TOLERANCE = 0.01;
 
 // Função para validar assinatura do webhook do Mercado Pago
@@ -379,19 +380,25 @@ async function notifyESP32WithRetry(
       console.log(`Notifying ESP32 at ${ip} (attempt ${attempt}/${MAX_NOTIFICATION_ATTEMPTS})`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), NOTIFICATION_TIMEOUT);
 
+      const payload = { 
+        poltrona_id: poltronaId,
+        payment_id: parseInt(paymentId)
+      };
+      
+      console.log(`Sending notification to ESP32 at ${ip} with payload:`, payload);
+      
       const response = await fetch(`http://${ip}/payment-approved`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          poltrona_id: poltronaId,
-          payment_id: parseInt(paymentId)
-        }),
+        body: JSON.stringify(payload),
         signal: controller.signal
       });
 
       clearTimeout(timeoutId);
+      
+      console.log(`ESP32 response status: ${response.status} on attempt ${attempt}`);
 
       if (response.ok) {
         console.log(`ESP32 notified successfully on attempt ${attempt}`);
