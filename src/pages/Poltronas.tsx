@@ -162,13 +162,13 @@ const Poltronas = () => {
     try {
       toast.info(`Testando poltrona ${poltronaId}...`);
       
-      const { data, error } = await supabase.functions.invoke('test-esp32-relay', {
+      const { data, error } = await supabase.functions.invoke('test-esp32-supabase', {
         body: { poltrona_id: poltronaId }
       });
 
       if (error) throw error;
       
-      toast.success(`✅ Teste enviado para poltrona ${poltronaId}! Os relés serão ativados por 10 segundos.`);
+      toast.success(`✅ Teste enviado para poltrona ${poltronaId}! O ESP32 deve detectar o pagamento via polling e ativar os relés por 10 segundos.`);
     } catch (error: any) {
       console.error('Erro ao testar poltrona:', error);
       toast.error(error.message || `Erro ao testar poltrona ${poltronaId}`);

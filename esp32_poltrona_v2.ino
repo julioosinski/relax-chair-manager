@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.3.1";
+const char* FIRMWARE_VERSION = "2.4.0";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -52,7 +52,7 @@ unsigned long lastHeartbeat = 0;
 unsigned long lastPaymentCheck = 0;
 unsigned long systemStartTime = 0;
 const unsigned long HEARTBEAT_INTERVAL = 60000; // 60 segundos
-const unsigned long PAYMENT_CHECK_INTERVAL = 30000; // 30 segundos
+const unsigned long PAYMENT_CHECK_INTERVAL = 10000; // 10 segundos
 
 // =============================================================================
 // SETUP

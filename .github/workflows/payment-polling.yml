@@ -1,0 +1,18 @@
+name: Payment Polling
+
+on:
+  schedule:
+    # Executar a cada minuto
+    - cron: '* * * * *'
+  workflow_dispatch:
+
+jobs:
+  poll-payments:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Poll Payments
+      run: |
+        curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/payment-polling-cron" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json"
