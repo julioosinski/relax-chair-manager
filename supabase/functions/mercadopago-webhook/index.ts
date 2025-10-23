@@ -326,8 +326,8 @@ serve(async (req) => {
         message: `✅ Pagamento aprovado: R$ ${paidAmount} - Sessão iniciada até ${sessionEndsAt.toLocaleTimeString('pt-BR')} - Payment ${paymentId}`
       });
 
-      // Tentar notificar ESP32 com retry e duração
-      await notifyESP32WithRetry(poltrona.ip, poltronaId, paymentId, poltrona.duration, supabase);
+      // Não tentar notificar ESP32 diretamente - deixar ESP32 fazer polling
+      // O ESP32 verifica pagamentos a cada 10 segundos via check-payment-status
 
       return new Response(
         JSON.stringify({ 
