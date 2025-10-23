@@ -340,14 +340,16 @@ serve(async (req) => {
       );
     }
 
-    // Registrar outros status
-    await supabase.from('payments').upsert({
-      payment_id: paymentId,
-      poltrona_id: poltronaId,
-      amount: paidAmount,
-      status: paymentStatus,
-      processed: true
-    }, { onConflict: 'payment_id' });
+    // Registrar outros status (apenas se não for approved)
+    if (paymentStatus !== 'approved') {
+      await supabase.from('payments').upsert({
+        payment_id: paymentId,
+        poltrona_id: poltronaId,
+        amount: paidAmount,
+        status: paymentStatus,
+        processed: true
+      }, { onConflict: 'payment_id' });
+    }
 
     await supabase.from('logs').insert({
       poltrona_id: poltronaId,
