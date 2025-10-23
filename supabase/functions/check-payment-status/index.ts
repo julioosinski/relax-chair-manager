@@ -57,11 +57,10 @@ serve(async (req) => {
       
       console.log(`Found pending payment ${payment.payment_id} for poltrona ${poltronaId}`);
 
-      // Marcar como processado
+      // Marcar como notificado (sem marcar como processado)
       await supabase
         .from('payments')
         .update({ 
-          processed: true,
           notified_at: new Date().toISOString()
         })
         .eq('payment_id', payment.payment_id);
