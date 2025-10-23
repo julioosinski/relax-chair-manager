@@ -169,11 +169,10 @@ serve(async (req) => {
         if (paymentData.status === 'approved') {
           approvedCount++;
           
-          // Atualizar status no banco
+          // Atualizar status no banco (sem marcar como processado ainda)
           await supabase.from('payments').update({
             status: 'approved',
-            approved_at: new Date().toISOString(),
-            processed: true
+            approved_at: new Date().toISOString()
           }).eq('payment_id', payment.payment_id);
 
           // Log do pagamento aprovado

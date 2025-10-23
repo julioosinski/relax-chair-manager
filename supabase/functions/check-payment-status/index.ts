@@ -34,13 +34,13 @@ serve(async (req) => {
 
     console.log(`Checking payment status for poltrona ${poltronaId}`);
 
-    // Buscar pagamentos aprovados e não processados
+    // Buscar pagamentos aprovados que ainda não foram notificados ao ESP32
     const { data: pendingPayments, error } = await supabase
       .from('payments')
       .select('payment_id, amount, approved_at')
       .eq('poltrona_id', poltronaId)
       .eq('status', 'approved')
-      .eq('processed', false)
+      .is('notified_at', null)
       .order('approved_at', { ascending: false })
       .limit(1);
 
