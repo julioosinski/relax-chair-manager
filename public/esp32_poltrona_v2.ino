@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.2.2";
+const char* FIRMWARE_VERSION = "2.3.0";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -49,8 +49,10 @@ Preferences prefs;
 bool massageActive = false;
 unsigned long massageEndTime = 0;
 unsigned long lastHeartbeat = 0;
+unsigned long lastPaymentCheck = 0;
 unsigned long systemStartTime = 0;
 const unsigned long HEARTBEAT_INTERVAL = 60000; // 60 segundos
+const unsigned long PAYMENT_CHECK_INTERVAL = 30000; // 30 segundos
 
 // =============================================================================
 // SETUP
@@ -100,6 +102,12 @@ void loop() {
   if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
     sendHeartbeat();
     lastHeartbeat = millis();
+  }
+  
+  // Verificar pagamentos pendentes
+  if (millis() - lastPaymentCheck >= PAYMENT_CHECK_INTERVAL) {
+    checkPendingPayments();
+    lastPaymentCheck = millis();
   }
   
   // Piscar LED se não conectado
@@ -638,7 +646,51 @@ void sendHeartbeat() {
 }
 
 // =============================================================================
-// ENVIAR LOG PARA SUPABASE (DESABILITADO - USA APENAS SERIAL)
+// VERIFICAR PAGAMENTOS PENDENTES
+// =============================================================================
+void checkPendingPayments() {
+  if (config.supabaseUrl.length() == 0 || WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  
+  HTTPClient http;
+  String url = config.supabaseUrl + "/functions/v1/check-payment-status";
+  
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", config.supabaseKey);
+  http.addHeader("Authorization", "Bearer " + config.supabaseKey);
+  http.setTimeout(10000);
+  
+  StaticJsonDocument<128> doc;
+  doc["poltrona_id"] = config.poltronaId;
+  
+  String payload;
+  serializeJson(doc, payload);
+  
+  int httpCode = http.POST(payload);
+  
+  if (httpCode == 200) {
+    String response = http.getString();
+    Serial.println("Payment check response: " + response);
+    
+    StaticJsonDocument<256> responseDoc;
+    DeserializationError error = deserializeJson(responseDoc, response);
+    
+    if (!error && responseDoc["hasPendingPayment"]) {
+      long paymentId = responseDoc["paymentId"];
+      Serial.println("Pagamento pendente encontrado: " + String(paymentId));
+      startMassage(paymentId);
+    }
+  } else {
+    Serial.println("Erro ao verificar pagamentos: " + String(httpCode));
+  }
+  
+  http.end();
+}
+
+// =============================================================================
+// ENVIAR LOG PARA SUPABASE (DESABILITADO -UTA APENAS SERIAL)
 // =============================================================================
 void sendLog(String message) {
   Serial.println("LOG: " + message);
