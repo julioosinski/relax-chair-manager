@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.1.0";
+const char* FIRMWARE_VERSION = "2.2.0";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -591,7 +591,7 @@ void stopMassage() {
 }
 
 // =============================================================================
-// ENVIAR HEARTBEAT PARA SUPABASE
+// ENVIAR HEARTBEAT PARA SUPABASE (VERSÃO ATUALIZADA)
 // =============================================================================
 void sendHeartbeat() {
   if (config.supabaseUrl.length() == 0 || WiFi.status() != WL_CONNECTED) {
@@ -599,18 +599,18 @@ void sendHeartbeat() {
   }
   
   HTTPClient http;
-  String url = config.supabaseUrl + "/rest/v1/poltrona_status?poltrona_id=eq." + config.poltronaId;
+  
+  // MUDANÇA: Usar a Edge Function ao invés do REST API direto
+  String url = config.supabaseUrl + "/functions/v1/esp32-heartbeat";
   
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", config.supabaseKey);
   http.addHeader("Authorization", "Bearer " + config.supabaseKey);
-  http.addHeader("Prefer", "resolution=merge-duplicates");
+  http.setTimeout(10000); // Timeout de 10 segundos
   
   StaticJsonDocument<256> doc;
   doc["poltrona_id"] = config.poltronaId;
-  doc["is_online"] = true;
-  doc["last_ping"] = "now()";
   doc["firmware_version"] = FIRMWARE_VERSION;
   doc["wifi_signal"] = WiFi.RSSI();
   doc["uptime_seconds"] = (millis() - systemStartTime) / 1000;
@@ -618,12 +618,17 @@ void sendHeartbeat() {
   String payload;
   serializeJson(doc, payload);
   
-  int httpCode = http.PATCH(payload);
+  // MUDANÇA: Usar POST ao invés de PATCH
+  int httpCode = http.POST(payload);
   
-  if (httpCode == 200 || httpCode == 201 || httpCode == 204) {
-    Serial.println("✓ Heartbeat enviado");
+  if (httpCode == 200 || httpCode == 201) {
+    Serial.println("✓ Heartbeat enviado com sucesso");
+  } else if (httpCode > 0) {
+    Serial.printf("✗ Erro ao enviar heartbeat: HTTP %d\n", httpCode);
+    String response = http.getString();
+    Serial.println("  Resposta: " + response);
   } else {
-    Serial.println("✗ Erro ao enviar heartbeat: " + String(httpCode));
+    Serial.println("✗ Falha na conexão do heartbeat: " + http.errorToString(httpCode));
   }
   
   http.end();
