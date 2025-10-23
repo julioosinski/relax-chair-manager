@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.3.0";
+const char* FIRMWARE_VERSION = "2.3.1";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -663,7 +663,7 @@ void checkPendingPayments() {
   http.setTimeout(10000);
   
   StaticJsonDocument<128> doc;
-  doc["poltrona_id"] = config.poltronaId;
+  doc["poltronaId"] = config.poltronaId;
   
   String payload;
   serializeJson(doc, payload);
