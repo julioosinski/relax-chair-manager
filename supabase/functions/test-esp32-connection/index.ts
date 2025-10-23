@@ -76,6 +76,8 @@ Deno.serve(async (req) => {
     } catch (error) {
       connectionError = error;
       const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
 
       console.error(`❌ Erro ao conectar com ESP32 após ${responseTime}ms:`, error);
 
@@ -85,16 +87,17 @@ Deno.serve(async (req) => {
           ip: poltrona.ip,
           status: 'offline',
           responseTime,
-          error: error.message,
-          errorType: error.name,
+          error: errorMessage,
+          errorType: errorName,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 503 }
       );
     }
   } catch (error) {
     console.error('❌ Erro no teste de conexão:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, message: error.message }),
+      JSON.stringify({ success: false, message: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

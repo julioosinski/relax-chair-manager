@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { User } from "@supabase/supabase-js";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ShieldAlert } from "lucide-react";
+import { formatBrazilDateTime } from "@/lib/dateUtils";
 
 interface Payment {
   payment_id: number;
@@ -150,17 +151,10 @@ const Pagamentos = () => {
                       </TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(payment.created_at).toLocaleDateString("pt-BR")}{" "}
-                        {new Date(payment.created_at).toLocaleTimeString("pt-BR")}
+                        {formatBrazilDateTime(payment.created_at)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {payment.approved_at
-                          ? `${new Date(payment.approved_at).toLocaleDateString(
-                              "pt-BR"
-                            )} ${new Date(payment.approved_at).toLocaleTimeString(
-                              "pt-BR"
-                            )}`
-                          : "-"}
+                        {formatBrazilDateTime(payment.approved_at)}
                       </TableCell>
                     </TableRow>
                   ))}

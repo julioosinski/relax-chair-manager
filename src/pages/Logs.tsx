@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ShieldAlert } from "lucide-react";
+import { formatBrazilDateTime } from "@/lib/dateUtils";
 
 interface Log {
   id: number;
@@ -121,7 +122,7 @@ const Logs = () => {
                           {log.poltrona_id}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(log.created_at).toLocaleString("pt-BR")}
+                          {formatBrazilDateTime(log.created_at)}
                         </span>
                       </div>
                       <p

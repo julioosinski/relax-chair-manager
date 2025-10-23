@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('❌ Erro no heartbeat:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, message: error.message }),
+      JSON.stringify({ success: false, message: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
