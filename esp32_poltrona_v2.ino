@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.2.0";
+const char* FIRMWARE_VERSION = "2.2.1";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -614,6 +614,7 @@ void sendHeartbeat() {
   doc["firmware_version"] = FIRMWARE_VERSION;
   doc["wifi_signal"] = WiFi.RSSI();
   doc["uptime_seconds"] = (millis() - systemStartTime) / 1000;
+  doc["ip"] = WiFi.localIP().toString();
   
   String payload;
   serializeJson(doc, payload);

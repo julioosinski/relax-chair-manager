@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { poltrona_id, firmware_version, wifi_signal, uptime_seconds } = await req.json();
+    const { poltrona_id, firmware_version, wifi_signal, uptime_seconds, ip } = await req.json();
 
     if (!poltrona_id) {
       return new Response(
@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
       firmware_version,
       wifi_signal,
       uptime_seconds,
+      ip,
     });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -52,6 +53,21 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, message: 'Erro ao atualizar status' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
+    }
+
+    // Atualizar IP na tabela poltronas se fornecido
+    if (ip) {
+      const { error: ipError } = await supabase
+        .from('poltronas')
+        .update({ ip })
+        .eq('poltrona_id', poltrona_id);
+
+      if (ipError) {
+        console.error('❌ Erro ao atualizar IP:', ipError);
+        // Não falha o heartbeat se o IP não puder ser atualizado
+      } else {
+        console.log(`✅ IP de ${poltrona_id} atualizado para ${ip}`);
+      }
     }
 
     console.log(`✅ Status de ${poltrona_id} atualizado com sucesso`);
