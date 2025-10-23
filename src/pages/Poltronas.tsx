@@ -159,11 +159,20 @@ const Poltronas = () => {
   };
 
   const handleTestStart = async (poltronaId: string) => {
-    toast.info(`Testando poltrona ${poltronaId}...`);
-    // API call would go here
-    setTimeout(() => {
-      toast.success(`✅ Poltrona ${poltronaId} acionada para teste`);
-    }, 1000);
+    try {
+      toast.info(`Testando poltrona ${poltronaId}...`);
+      
+      const { data, error } = await supabase.functions.invoke('test-esp32-relay', {
+        body: { poltrona_id: poltronaId }
+      });
+
+      if (error) throw error;
+      
+      toast.success(`✅ Teste enviado para poltrona ${poltronaId}! Os relés serão ativados por 10 segundos.`);
+    } catch (error: any) {
+      console.error('Erro ao testar poltrona:', error);
+      toast.error(error.message || `Erro ao testar poltrona ${poltronaId}`);
+    }
   };
 
   const [isGeneratingQR, setIsGeneratingQR] = useState<Record<string, boolean>>({});
