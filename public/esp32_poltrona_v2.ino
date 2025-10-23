@@ -27,7 +27,7 @@
 // =============================================================================
 // VERSÃO DO FIRMWARE
 // =============================================================================
-const char* FIRMWARE_VERSION = "2.2.1";
+const char* FIRMWARE_VERSION = "2.2.2";
 
 // =============================================================================
 // ESTRUTURA DE CONFIGURAÇÃO
@@ -619,11 +619,13 @@ void sendHeartbeat() {
   String payload;
   serializeJson(doc, payload);
   
+  Serial.println("Enviando heartbeat com payload: " + payload);
+  
   // MUDANÇA: Usar POST ao invés de PATCH
   int httpCode = http.POST(payload);
   
   if (httpCode == 200 || httpCode == 201) {
-    Serial.println("✓ Heartbeat enviado com sucesso");
+    Serial.println("✓ Heartbeat enviado com sucesso - IP: " + WiFi.localIP().toString());
   } else if (httpCode > 0) {
     Serial.printf("✗ Erro ao enviar heartbeat: HTTP %d\n", httpCode);
     String response = http.getString();
@@ -636,38 +638,13 @@ void sendHeartbeat() {
 }
 
 // =============================================================================
-// ENVIAR LOG PARA SUPABASE
+// ENVIAR LOG PARA SUPABASE (DESABILITADO - USA APENAS SERIAL)
 // =============================================================================
 void sendLog(String message) {
   Serial.println("LOG: " + message);
   
-  if (config.supabaseUrl.length() == 0 || WiFi.status() != WL_CONNECTED) {
-    return;
-  }
-  
-  HTTPClient http;
-  String url = config.supabaseUrl + "/rest/v1/logs";
-  
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("apikey", config.supabaseKey);
-  http.addHeader("Authorization", "Bearer " + config.supabaseKey);
-  http.addHeader("Prefer", "return=minimal");
-  
-  StaticJsonDocument<256> doc;
-  doc["poltrona_id"] = config.poltronaId;
-  doc["message"] = message;
-  
-  String payload;
-  serializeJson(doc, payload);
-  
-  int httpCode = http.POST(payload);
-  
-  if (httpCode != 201) {
-    Serial.println("✗ Erro ao enviar log: " + String(httpCode));
-  }
-  
-  http.end();
+  // Log apenas no Serial Monitor para evitar erros 401
+  // O sistema de logs será gerenciado pelo backend
 }
 
 // =============================================================================
