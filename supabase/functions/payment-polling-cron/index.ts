@@ -185,21 +185,8 @@ serve(async (req) => {
             message: `Pagamento ${payment.payment_id} aprovado (R$ ${paymentData.transaction_amount}) - detectado por polling automático`
           });
 
-          // Buscar IP do ESP32
-          const { data: poltrona } = await supabase
-            .from('poltronas')
-            .select('ip')
-            .eq('poltrona_id', payment.poltrona_id)
-            .maybeSingle();
-
-          if (poltrona?.ip) {
-            await notifyESP32WithRetry(
-              poltrona.ip,
-              payment.poltrona_id,
-              payment.payment_id,
-              supabase
-            );
-          }
+          // Não tentar notificar ESP32 diretamente - deixar ESP32 fazer polling
+          // O ESP32 verifica pagamentos a cada 10 segundos via check-payment-status
 
         } else if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
           rejectedCount++;
