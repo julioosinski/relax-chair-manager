@@ -385,8 +385,8 @@ async function notifyESP32WithRetry(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          payment_id: paymentId,
-          duration: duration
+          poltrona_id: poltronaId,
+          payment_id: parseInt(paymentId)
         }),
         signal: controller.signal
       });
