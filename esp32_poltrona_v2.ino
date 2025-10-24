@@ -650,8 +650,11 @@ void sendHeartbeat() {
 // =============================================================================
 void checkPendingPayments() {
   if (config.supabaseUrl.length() == 0 || WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠️ Não pode verificar pagamentos: WiFi desconectado ou config incompleta");
     return;
   }
+  
+  Serial.println("🔍 Verificando pagamentos pendentes para " + config.poltronaId + "...");
   
   HTTPClient http;
   String url = config.supabaseUrl + "/functions/v1/check-payment-status";
@@ -668,22 +671,35 @@ void checkPendingPayments() {
   String payload;
   serializeJson(doc, payload);
   
+  Serial.println("📤 Enviando request para: " + url);
+  
   int httpCode = http.POST(payload);
   
   if (httpCode == 200) {
     String response = http.getString();
-    Serial.println("Payment check response: " + response);
+    Serial.println("✅ Resposta recebida (HTTP " + String(httpCode) + "): " + response);
     
     StaticJsonDocument<256> responseDoc;
     DeserializationError error = deserializeJson(responseDoc, response);
     
-    if (!error && responseDoc["hasPendingPayment"]) {
+    if (error) {
+      Serial.println("❌ Erro ao parsear JSON: " + String(error.c_str()));
+    } else if (responseDoc["hasPendingPayment"]) {
       long paymentId = responseDoc["paymentId"];
-      Serial.println("Pagamento pendente encontrado: " + String(paymentId));
+      float amount = responseDoc["amount"];
+      Serial.println("💰 Pagamento pendente encontrado!");
+      Serial.println("   Payment ID: " + String(paymentId));
+      Serial.println("   Valor: R$ " + String(amount));
       startMassage(paymentId);
+    } else {
+      Serial.println("⭕ Nenhum pagamento pendente no momento");
     }
+  } else if (httpCode > 0) {
+    String response = http.getString();
+    Serial.println("❌ Erro HTTP " + String(httpCode));
+    Serial.println("   Resposta: " + response);
   } else {
-    Serial.println("Erro ao verificar pagamentos: " + String(httpCode));
+    Serial.println("❌ Falha na conexão: " + http.errorToString(httpCode));
   }
   
   http.end();

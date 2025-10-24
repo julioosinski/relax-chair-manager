@@ -32,7 +32,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Checking payment status for poltrona ${poltronaId}`);
+    console.log(`🔍 Checking payment status for poltrona ${poltronaId}`);
 
     // Buscar pagamentos aprovados que ainda não foram notificados ao ESP32
     const { data: pendingPayments, error } = await supabase
@@ -45,17 +45,19 @@ serve(async (req) => {
       .limit(1);
 
     if (error) {
-      console.error('Error checking payments:', error);
+      console.error('❌ Error checking payments:', error);
       return new Response(
         JSON.stringify({ error: 'Database error' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
+    console.log(`📊 Found ${pendingPayments?.length || 0} pending payment(s) for ${poltronaId}`);
+
     if (pendingPayments && pendingPayments.length > 0) {
       const payment = pendingPayments[0];
       
-      console.log(`Found pending payment ${payment.payment_id} for poltrona ${poltronaId}`);
+      console.log(`✅ Found pending payment ${payment.payment_id} for poltrona ${poltronaId} - Amount: R$ ${payment.amount}`);
 
       // Marcar como notificado (sem marcar como processado)
       await supabase
@@ -71,6 +73,8 @@ serve(async (req) => {
         message: `ESP32 verificou e processou pagamento ${payment.payment_id} via polling`
       });
 
+      console.log(`📤 Returning payment to ESP32: ${payment.payment_id}`);
+
       return new Response(
         JSON.stringify({
           hasPendingPayment: true,
@@ -81,6 +85,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
+
+    console.log(`⭕ No pending payments for ${poltronaId}`);
 
     // Nenhum pagamento pendente
     return new Response(
