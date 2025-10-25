@@ -689,7 +689,16 @@ void checkPendingPayments() {
     } else if (responseDoc["hasPendingPayment"]) {
       long paymentId = responseDoc["paymentId"];
       float amount = responseDoc["amount"];
-      long duration = responseDoc["duration"] | config.duration; // Usar duração do servidor ou fallback para config
+      
+      // Obter duração corretamente (não usar operador bitwise!)
+      long duration;
+      if (responseDoc.containsKey("duration") && responseDoc["duration"] > 0) {
+        duration = responseDoc["duration"].as<long>();
+        Serial.println("   ⚙️ Usando duração do servidor: " + String(duration) + "s");
+      } else {
+        duration = config.duration;
+        Serial.println("   ⚙️ Usando duração local (fallback): " + String(duration) + "s");
+      }
       
       // Verificar se já processou este pagamento ou se já há massagem ativa
       if (paymentId == lastProcessedPaymentId) {
