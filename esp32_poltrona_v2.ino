@@ -51,6 +51,7 @@ unsigned long massageEndTime = 0;
 unsigned long lastHeartbeat = 0;
 unsigned long lastPaymentCheck = 0;
 unsigned long systemStartTime = 0;
+long lastProcessedPaymentId = 0; // Rastrear último pagamento processado
 const unsigned long HEARTBEAT_INTERVAL = 60000; // 60 segundos
 const unsigned long PAYMENT_CHECK_INTERVAL = 10000; // 10 segundos
 
@@ -587,6 +588,7 @@ void stopMassage() {
   Serial.println("=== FINALIZANDO MASSAGEM ===");
   
   massageActive = false;
+  lastProcessedPaymentId = 0; // Resetar para permitir novos pagamentos
   
   // Desligar todos os relés
   digitalWrite(RELE_1, LOW);
@@ -688,11 +690,20 @@ void checkPendingPayments() {
       long paymentId = responseDoc["paymentId"];
       float amount = responseDoc["amount"];
       long duration = responseDoc["duration"] | config.duration; // Usar duração do servidor ou fallback para config
-      Serial.println("💰 Pagamento pendente encontrado!");
-      Serial.println("   Payment ID: " + String(paymentId));
-      Serial.println("   Valor: R$ " + String(amount));
-      Serial.println("   Duração: " + String(duration) + "s");
-      startMassage(paymentId, duration);
+      
+      // Verificar se já processou este pagamento ou se já há massagem ativa
+      if (paymentId == lastProcessedPaymentId) {
+        Serial.println("⚠️ Pagamento " + String(paymentId) + " já foi processado anteriormente");
+      } else if (massageActive) {
+        Serial.println("⚠️ Massagem já em andamento - ignorando novo pagamento");
+      } else {
+        Serial.println("💰 Pagamento pendente encontrado!");
+        Serial.println("   Payment ID: " + String(paymentId));
+        Serial.println("   Valor: R$ " + String(amount));
+        Serial.println("   Duração: " + String(duration) + "s");
+        lastProcessedPaymentId = paymentId;
+        startMassage(paymentId, duration);
+      }
     } else {
       Serial.println("⭕ Nenhum pagamento pendente no momento");
     }
