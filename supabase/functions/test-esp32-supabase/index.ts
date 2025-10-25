@@ -31,7 +31,7 @@ serve(async (req) => {
     const { data: testPayment, error: insertError } = await supabase
       .from('payments')
       .insert({
-        payment_id: `TEST_${Date.now()}`,
+        payment_id: Date.now(),
         poltrona_id: poltrona_id,
         amount: 0.01,
         status: 'approved',

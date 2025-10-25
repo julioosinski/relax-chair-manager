@@ -524,7 +524,7 @@ void handlePaymentApproved() {
   }
   
   // Iniciar massagem
-  startMassage(paymentId);
+  startMassage(paymentId, config.duration);
   
   server.send(200, "application/json", "{\"status\":\"success\",\"massage_started\":true}");
   
@@ -562,13 +562,13 @@ void handleTest() {
 // =============================================================================
 // INICIAR MASSAGEM
 // =============================================================================
-void startMassage(long paymentId) {
+void startMassage(long paymentId, long duration) {
   Serial.println("=== INICIANDO MASSAGEM ===");
   Serial.println("Payment ID: " + String(paymentId));
-  Serial.println("Duração: " + String(config.duration) + "s");
+  Serial.println("Duração: " + String(duration) + "s");
   
   massageActive = true;
-  massageEndTime = millis() + (config.duration * 1000);
+  massageEndTime = millis() + (duration * 1000);
   
   // Ligar todos os relés
   digitalWrite(RELE_1, HIGH);
@@ -576,8 +576,8 @@ void startMassage(long paymentId) {
   digitalWrite(RELE_3, HIGH);
   digitalWrite(RELE_4, HIGH);
   
-  sendLog("Massagem iniciada - Payment ID: " + String(paymentId));
-  Serial.println("✓ Relés ativados");
+  sendLog("Massagem iniciada - Payment ID: " + String(paymentId) + " - Duração: " + String(duration) + "s");
+  Serial.println("✓ Relés ativados por " + String(duration) + "s");
 }
 
 // =============================================================================
@@ -687,10 +687,12 @@ void checkPendingPayments() {
     } else if (responseDoc["hasPendingPayment"]) {
       long paymentId = responseDoc["paymentId"];
       float amount = responseDoc["amount"];
+      long duration = responseDoc["duration"] | config.duration; // Usar duração do servidor ou fallback para config
       Serial.println("💰 Pagamento pendente encontrado!");
       Serial.println("   Payment ID: " + String(paymentId));
       Serial.println("   Valor: R$ " + String(amount));
-      startMassage(paymentId);
+      Serial.println("   Duração: " + String(duration) + "s");
+      startMassage(paymentId, duration);
     } else {
       Serial.println("⭕ Nenhum pagamento pendente no momento");
     }

@@ -34,14 +34,22 @@ serve(async (req) => {
 
     console.log(`🔍 Checking payment status for poltrona ${poltronaId}`);
 
-    // Buscar pagamentos aprovados que ainda não foram notificados ao ESP32
+    // Buscar configuração da poltrona para obter a duração
+    const { data: poltronaConfig } = await supabase
+      .from('poltronas')
+      .select('duration')
+      .eq('poltrona_id', poltronaId)
+      .single();
+
+    // Buscar pagamentos aprovados que ainda não foram notificados E não processados
     const { data: pendingPayments, error } = await supabase
       .from('payments')
       .select('payment_id, amount, approved_at')
       .eq('poltrona_id', poltronaId)
       .eq('status', 'approved')
       .is('notified_at', null)
-      .order('approved_at', { ascending: false })
+      .eq('processed', false)
+      .order('approved_at', { ascending: true })
       .limit(1);
 
     if (error) {
@@ -75,12 +83,24 @@ serve(async (req) => {
 
       console.log(`📤 Returning payment to ESP32: ${payment.payment_id}`);
 
+      // Criar sessão ativa
+      await supabase
+        .from('poltrona_sessions')
+        .upsert({
+          poltrona_id: poltronaId,
+          payment_id: payment.payment_id,
+          started_at: new Date().toISOString(),
+          expected_end_at: new Date(Date.now() + (poltronaConfig?.duration || 900) * 1000).toISOString(),
+          active: true
+        });
+
       return new Response(
         JSON.stringify({
           hasPendingPayment: true,
           paymentId: payment.payment_id,
           amount: payment.amount,
-          approvedAt: payment.approved_at
+          approvedAt: payment.approved_at,
+          duration: poltronaConfig?.duration || 900
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );

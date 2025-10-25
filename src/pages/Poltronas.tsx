@@ -181,6 +181,28 @@ const Poltronas = () => {
     try {
       setIsGeneratingQR(prev => ({ ...prev, [poltrona.poltrona_id]: true }));
       
+      // Verificar se há sessão ativa
+      const { data: activeSession } = await supabase
+        .from('poltrona_sessions')
+        .select('*')
+        .eq('poltrona_id', poltrona.poltrona_id)
+        .eq('active', true)
+        .single();
+
+      if (activeSession) {
+        const remainingTime = Math.ceil(
+          (new Date(activeSession.expected_end_at).getTime() - Date.now()) / 1000
+        );
+        
+        if (remainingTime > 0) {
+          toast.error(
+            `Aguarde ${remainingTime}s - Sessão em andamento`,
+            { duration: 5000 }
+          );
+          return;
+        }
+      }
+      
       const currentUrl = window.location.origin;
       const publicUrl = `${currentUrl}/pay/${poltrona.poltrona_id}`;
       

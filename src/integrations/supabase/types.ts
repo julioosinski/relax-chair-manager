@@ -200,6 +200,33 @@ export type Database = {
           },
         ]
       }
+      poltrona_sessions: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          expected_end_at: string
+          payment_id: number
+          poltrona_id: string
+          started_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          expected_end_at: string
+          payment_id: number
+          poltrona_id: string
+          started_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          expected_end_at?: string
+          payment_id?: number
+          poltrona_id?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
       poltrona_status: {
         Row: {
           error_message: string | null
